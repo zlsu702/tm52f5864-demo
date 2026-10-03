@@ -1,0 +1,491 @@
+C51 COMPILER V9.00   GXHTV4                                                                01/25/2026 17:20:40 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE GXHTV4
+OBJECT MODULE PLACED IN .\Objects\gxhtv4.obj
+COMPILER INVOKED BY: D:\Program Files\keil\C51\BIN\C51.EXE src\gxhtv4.c BROWSE INCDIR(.\src) DEBUG OBJECTEXTEND PRINT(.\
+                    -Listings\gxhtv4.lst) OBJECT(.\Objects\gxhtv4.obj)
+
+line level    source
+
+   1          /**************************************************************************************************
+   2            Filename:       gxhtv4.c
+   3            Revised:        $Date: 2010-08-06 08:56:11 -0700 (Fri, 06 Aug 2010) $
+   4            Revision:       $Revision: 23333 $
+   5          **************************************************************************************************/
+   6          #include "AllHeadFile.h"
+   7          /*********************************************************************
+   8          /*********************************************************************
+   9           * TYPEDEFS
+  10           */
+  11          #define IO_SDA          P1_6 
+  12          #define SetSDIO_HIGH    do{P1MOD76=(P1MOD76&~0x0f)|1<<0;P1_6=1;}while(0) 
+  13          #define SetSDIO_LOW     do{P1_6=0;P1MOD76=(P1MOD76&~0x0f)|2<<0;}while(0) 
+  14          #define SetSCLK_HIGH    P3_6=1
+  15          #define SetSCLK_LOW     P3_6=0  
+  16          
+  17          /*********************************************************************
+  18           */
+  19           
+  20          xdata uchar TempFlag;
+  21          xdata uchar TempCyc;
+  22          xdata uchar TempNum[2];
+  23          xdata uchar HumiNum;
+  24          //xdata uchar AdjActiveTime;
+  25          //xdata uchar AdjReleaseTime;
+  26          //xdata uchar TempSave;
+  27          //xdata uchar HumiSave;
+  28          //xdata uchar AdjTemp;
+  29          //xdata uchar AdjHumi;
+  30          
+  31          static uchar CRC_8(uchar numh,uchar numl); 
+  32          //static void TempNumAdjust(void);
+  33          //static void HumiNumAdjust(void);
+  34          //static void CheckReleaseAdjust(void);
+  35          
+  36          /*********************************************************************
+  37           * LOCAL FUNCTIONS
+  38           */
+  39          void Gxhtv4PowerOn(void)
+  40          {
+  41   1      //      AdjActiveTime = 0;
+  42   1              TempCyc = 0;
+  43   1              ReadyRFC();
+  44   1      }
+  45          
+  46          void Gxhtv4PowerOff(void)
+  47          {
+  48   1      //      AdjReleaseTime = 0;
+  49   1              TempFlag &= D_SensorDis;
+  50   1      }
+  51          
+  52          static void I2CDelay(void)
+  53          {
+  54   1              _nop_();
+C51 COMPILER V9.00   GXHTV4                                                                01/25/2026 17:20:40 PAGE 2   
+
+  55   1              _nop_();
+  56   1              _nop_();
+  57   1              _nop_();
+  58   1              _nop_();
+  59   1      }
+  60           
+  61          static void I2CStart(void)
+  62          {
+  63   1              SetSDIO_HIGH;
+  64   1              I2CDelay();
+  65   1              SetSCLK_HIGH;
+  66   1              I2CDelay();
+  67   1              SetSDIO_LOW;
+  68   1              I2CDelay();
+  69   1              SetSCLK_LOW;
+  70   1              I2CDelay();
+  71   1      }
+  72          
+  73          static void I2CStop(void)
+  74          {
+  75   1              SetSDIO_LOW;
+  76   1              I2CDelay();
+  77   1              SetSCLK_HIGH;
+  78   1              I2CDelay();
+  79   1              SetSDIO_HIGH;
+  80   1              I2CDelay();
+  81   1      }
+  82          
+  83          static void I2CAck(void)
+  84          {
+  85   1              SetSCLK_LOW;
+  86   1              I2CDelay();
+  87   1              SetSDIO_LOW;
+  88   1              I2CDelay();
+  89   1              SetSCLK_HIGH;
+  90   1              I2CDelay();
+  91   1              SetSCLK_LOW;
+  92   1              I2CDelay();
+  93   1      }
+  94          
+  95          static void I2CNAck(void)
+  96          {
+  97   1              SetSCLK_LOW;
+  98   1              I2CDelay();
+  99   1              SetSDIO_HIGH;
+ 100   1              I2CDelay();
+ 101   1              SetSCLK_HIGH;
+ 102   1              I2CDelay();
+ 103   1              SetSCLK_LOW;
+ 104   1              I2CDelay();
+ 105   1      }
+ 106          
+ 107          /*********************************************************************/
+ 108          
+ 109          static uchar I2CWriteByte(uchar wdata)
+ 110          {
+ 111   1              uchar i;
+ 112   1              uchar err = 1;
+ 113   1              for(i=0;i<8;i++)
+ 114   1              {
+ 115   2                      SetSCLK_LOW;
+ 116   2                      I2CDelay();
+C51 COMPILER V9.00   GXHTV4                                                                01/25/2026 17:20:40 PAGE 3   
+
+ 117   2                      if(wdata&0x80)
+ 118   2                              SetSDIO_HIGH;
+ 119   2                      else
+ 120   2                              SetSDIO_LOW;    
+ 121   2                      I2CDelay();      
+ 122   2                      SetSCLK_HIGH;
+ 123   2                      I2CDelay();
+ 124   2                      wdata <<=1;
+ 125   2              }
+ 126   1              //I2CWaitAck
+ 127   1              SetSCLK_LOW;    
+ 128   1              I2CDelay();
+ 129   1              SetSDIO_HIGH;
+ 130   1              I2CDelay();
+ 131   1              I2CDelay();
+ 132   1              SetSCLK_HIGH;
+ 133   1              for(i=0;i<4;i++)
+ 134   1              {
+ 135   2                      if(IO_SDA==0)
+ 136   2                      {
+ 137   3                              err = 0;
+ 138   3                              break;
+ 139   3                      }       
+ 140   2                      DelayNOP(50);   
+ 141   2              }
+ 142   1              SetSCLK_LOW;    
+ 143   1              return(err);
+ 144   1      }
+ 145          
+ 146          static uchar I2CReadByte(void)
+ 147          {
+ 148   1              uchar i;
+ 149   1              uchar rdata;
+ 150   1              
+ 151   1              SetSDIO_HIGH;
+ 152   1              for(i=0;i<8;i++)
+ 153   1              {
+ 154   2                      I2CDelay();
+ 155   2                      SetSCLK_LOW;
+ 156   2                      I2CDelay();
+ 157   2                      rdata <<=1;
+ 158   2                      SetSCLK_HIGH;
+ 159   2                      I2CDelay();
+ 160   2                      if(IO_SDA)              
+ 161   2                              rdata |= 0x01;  
+ 162   2              }
+ 163   1              return(rdata);
+ 164   1      }
+ 165          
+ 166          
+ 167          /*********************************************************************
+ 168           * @fn      Gxhtv4CheckOn
+ 169           *
+ 170           * @brief   
+ 171           *
+ 172           *
+ 173           * @param   none
+ 174           *
+ 175           * @return  none
+ 176           */
+ 177          void Gxhtv4CheckOn( void ) 
+ 178          {
+C51 COMPILER V9.00   GXHTV4                                                                01/25/2026 17:20:40 PAGE 4   
+
+ 179   1              uchar err = 0;
+ 180   1      //      uchar read_id[2];
+ 181   1              
+ 182   1      //      AdjTemp = 0xff;
+ 183   1      //      AdjHumi = 0xff;
+ 184   1                      
+ 185   1              SetSDIO_HIGH;
+ 186   1              SetSCLK_HIGH;
+ 187   1              DelayNOP(500);
+ 188   1              
+ 189   1              I2CStart();                     //reset
+ 190   1              err |= I2CWriteByte(0x88);
+ 191   1              err |= I2CWriteByte(0x94);
+ 192   1              I2CStop();
+ 193   1              DelayNOP(500);
+ 194   1              
+ 195   1      ////    I2CStart();                     //read id
+ 196   1      ////    err |= I2CWriteByte(0x88);
+ 197   1      ////    err |= I2CWriteByte(0x89);
+ 198   1      ////    err |= I2CWriteByte(0x81);
+ 199   1      ////    I2CStop();
+ 200   1      ////    
+ 201   1      ////    I2CStart();
+ 202   1      ////    err |= I2CWriteByte(0x89);
+ 203   1      ////    read_id[1] = I2CReadByte();
+ 204   1      ////    I2CAck();
+ 205   1      ////    read_id[0] = I2CReadByte();
+ 206   1      ////    I2CNAck();
+ 207   1      ////    I2CStop();
+ 208   1              
+ 209   1      //      if((err)||((read_id[1]!=0x59)||(read_id[0]!=0x59)))
+ 210   1              if(err)
+ 211   1                      TempFlag = D_SensorDis;
+ 212   1      }       
+ 213          
+ 214          //=====================================================================
+ 215          //sec service
+ 216          void CheckReadyRFC( void ) 
+ 217          {
+ 218   1              if((SysFlag&D_IrEn)==0)
+ 219   1              {
+ 220   2      //              CheckReleaseAdjust();
+ 221   2                      return; 
+ 222   2              }       
+ 223   1              
+ 224   1              TempCyc++;
+ 225   1              if(TempCyc>9)
+ 226   1              {
+ 227   2                      TempCyc = 0;
+ 228   2      //              if(AdjActiveTime<255)
+ 229   2      //                      AdjActiveTime++;
+ 230   2                      ReadyRFC();
+ 231   2              }       
+ 232   1      }
+ 233          
+ 234          //=====================================================================
+ 235          void ReadyRFC( void ) 
+ 236          {
+ 237   1              if(TempFlag&D_SensorDis)
+ 238   1                      return;
+ 239   1              
+ 240   1              TempFlag = D_ReadyFlag;         
+C51 COMPILER V9.00   GXHTV4                                                                01/25/2026 17:20:40 PAGE 5   
+
+ 241   1      }
+ 242          
+ 243          //=====================================================================
+ 244          //Server in 32hz
+ 245          void Gxhtv4Server( void ) 
+ 246          {
+ 247   1              uchar err = 0;
+ 248   1              uchar temp_data[6];
+ 249   1              if(TempFlag&D_TempWait)
+ 250   1              {
+ 251   2                      TempFlag = 0;
+ 252   2                      I2CStart();
+ 253   2                      err |= I2CWriteByte(0x89);
+ 254   2                      temp_data[5] = I2CReadByte();
+ 255   2                      I2CAck();
+ 256   2                      temp_data[4] = I2CReadByte();
+ 257   2                      I2CAck();
+ 258   2                      temp_data[3] = I2CReadByte();
+ 259   2                      I2CAck();
+ 260   2                      temp_data[2] = I2CReadByte();
+ 261   2                      I2CAck();
+ 262   2                      temp_data[1] = I2CReadByte();
+ 263   2                      I2CAck();
+ 264   2                      temp_data[0] = I2CReadByte();
+ 265   2                      I2CNAck();
+ 266   2                      I2CStop();      
+ 267   2                      
+ 268   2                      if(err) 
+ 269   2                              return;
+ 270   2                      //Cht8320GetTempNum     
+ 271   2                      //tempC = -45+175*temp/255(-10~70)      
+ 272   2                      //tempF = -49+315*temp/255      
+ 273   2                      err = CRC_8(temp_data[5],temp_data[4]);
+ 274   2                      if(err==temp_data[3])   
+ 275   2                      {
+ 276   3      //                      TempNum[0] = (uchar)(175*(uint)temp_data[5]/255);
+ 277   3                              TempNum[0] = (uchar)(175*(uint)temp_data[5]/255)-2;
+ 278   3      //                      TempNumAdjust();        
+ 279   3                              if(TempNum[0]<36)       //<=-10
+ 280   3                              {
+ 281   4                                      TempNum[1] = TEMP_LOW;
+ 282   4                              }       
+ 283   3                              else if(TempNum[0]<45)  //<0
+ 284   3                              {
+ 285   4                                      TempNum[1] = 0x80;
+ 286   4                                      TempNum[0] = 45-TempNum[0];
+ 287   4                              }       
+ 288   3                              else if(TempNum[0]<116) //<70
+ 289   3                              {
+ 290   4                                      TempNum[1] = 0;
+ 291   4                                      TempNum[0] = TempNum[0]-45;
+ 292   4                              }
+ 293   3                              else                    //>70
+ 294   3                              {
+ 295   4                                      TempNum[1] = TEMP_HIGH;
+ 296   4                              }       
+ 297   3                      }       
+ 298   2                      //Cht8320GetHumiNum
+ 299   2                      //Humidity = = -6+125*temp/255(1~99)
+ 300   2                      err = CRC_8(temp_data[2],temp_data[1]); 
+ 301   2                      if(err==temp_data[0])   
+ 302   2                      {
+C51 COMPILER V9.00   GXHTV4                                                                01/25/2026 17:20:40 PAGE 6   
+
+ 303   3      //                      HumiNum =  (uchar)(125*(uint)temp_data[2]/255);
+ 304   3                              HumiNum =  (uchar)(125*(uint)temp_data[2]/255)+2;
+ 305   3                              if(HumiNum>5)
+ 306   3                                      HumiNum = HumiNum-6;
+ 307   3                              else    
+ 308   3                                      HumiNum = 0;
+ 309   3      //                      HumiNumAdjust();
+ 310   3                              if(HumiNum>99)
+ 311   3                                      HumiNum = 99;
+ 312   3                      }
+ 313   2              }       
+ 314   1              else if(TempFlag&D_ReadyFlag)
+ 315   1              {
+ 316   2                      TempFlag |= D_TempWait;
+ 317   2                      I2CStart();                     //read th
+ 318   2                      I2CWriteByte(0x88);
+ 319   2                      I2CWriteByte(0xfd);
+ 320   2                      I2CStop();
+ 321   2              }       
+ 322   1      }
+ 323          
+ 324          //=====================================================================
+ 325          static uchar CRC_8(uchar numh,uchar numl) 
+ 326          {
+ 327   1              uchar i;
+ 328   1              uchar crc8 = 0xff;
+ 329   1              crc8 ^= numh;
+ 330   1              for (i = 8; i > 0; --i)
+ 331   1              {
+ 332   2                      if ((crc8 & 0x80) != 0)
+ 333   2                      {
+ 334   3                              crc8 *= 2;
+ 335   3                              crc8 ^= 0x31;
+ 336   3                      }
+ 337   2                      else
+ 338   2                      {
+ 339   3                              crc8 *= 2;
+ 340   3                      }
+ 341   2              }
+ 342   1      
+ 343   1              crc8 ^= numl;
+ 344   1              for (i = 8; i > 0; --i)
+ 345   1              {
+ 346   2                      if ((crc8 & 0x80) != 0)
+ 347   2                      {
+ 348   3                      crc8 *= 2;
+ 349   3                      crc8 ^= 0x31;
+ 350   3                      }
+ 351   2                      else
+ 352   2                      {
+ 353   3                      crc8 *= 2;
+ 354   3                      }
+ 355   2              }
+ 356   1              return crc8;
+ 357   1      }
+ 358          
+ 359          //=====================================================================
+ 360          //key
+ 361          //void ResetAdjActive(void)
+ 362          //{
+ 363          //      AdjActiveTime = 0;      
+ 364          //}
+C51 COMPILER V9.00   GXHTV4                                                                01/25/2026 17:20:40 PAGE 7   
+
+ 365          
+ 366          //=====================================================================
+ 367          ////sec
+ 368          //static void CheckReleaseAdjust(void)
+ 369          //{
+ 370          //      if(Second)
+ 371          //              return; 
+ 372          //              
+ 373          //      AdjReleaseTime++;
+ 374          //      if(AdjReleaseTime>10)           //10min
+ 375          //      {
+ 376          //              AdjTemp = 0xff;
+ 377          //              AdjHumi = 0xff;
+ 378          //      }       
+ 379          //}
+ 380          
+ 381          //=====================================================================
+ 382          //static void TempNumAdjust(void)
+ 383          //{
+ 384          //      if(AdjTemp==0xff)               //firstEnter
+ 385          //      {
+ 386          //              TempSave = TempNum[0];
+ 387          //              AdjTemp = 0;
+ 388          //      }       
+ 389          ////    else if(AdjActiveTime<60)       //60*10s=10min          
+ 390          //      else if(AdjActiveTime<180)      //180*10s=30min         
+ 391          //      {
+ 392          //              if(TempNum[0]>TempSave)
+ 393          //              {
+ 394          //                      AdjTemp = TempNum[0]-TempSave;
+ 395          //                      TempNum[0] = TempSave;
+ 396          //              }       
+ 397          //              else
+ 398          //              {
+ 399          //                      TempSave = TempNum[0];
+ 400          //                      AdjTemp = 0;
+ 401          //              }       
+ 402          //      }       
+ 403          //      else
+ 404          //      {
+ 405          //              if(TempNum[0]>=AdjTemp)
+ 406          //                      TempNum[0] = TempNum[0]-AdjTemp;
+ 407          //              else
+ 408          //                      TempNum[0] = 0;
+ 409          //              
+ 410          ////            if((TempNum[0]<TempSave)&&AdjTemp)      
+ 411          ////            {
+ 412          ////                    AdjTemp--;
+ 413          ////                    TempNum[0] = TempSave;
+ 414          ////            }       
+ 415          //      }       
+ 416          //}
+ 417          //
+ 418          ////=====================================================================
+ 419          //static void HumiNumAdjust(void)
+ 420          //{
+ 421          //      if(AdjHumi==0xff)               //firstEnter
+ 422          //      {
+ 423          //              HumiSave = HumiNum;
+ 424          //              AdjHumi = 0;
+ 425          //      }       
+ 426          ////    else if(AdjActiveTime<120)      //120*10s=20min         
+C51 COMPILER V9.00   GXHTV4                                                                01/25/2026 17:20:40 PAGE 8   
+
+ 427          //      else if(AdjActiveTime<180)      //180*10s=30min         
+ 428          //      {
+ 429          //              if(HumiNum<HumiSave)
+ 430          //              {
+ 431          //                      AdjHumi = HumiSave-HumiNum;
+ 432          //                      HumiNum = HumiSave;
+ 433          //              }       
+ 434          //              else
+ 435          //              {
+ 436          //                      HumiSave = HumiNum;
+ 437          //                      AdjHumi = 0;
+ 438          //              }       
+ 439          //      }       
+ 440          //      else
+ 441          //      {
+ 442          //              HumiNum = HumiNum+AdjHumi;
+ 443          //              
+ 444          ////            if((HumiNum>HumiSave)&&AdjHumi) 
+ 445          ////            {
+ 446          ////                    AdjHumi--;
+ 447          ////                    HumiNum = HumiSave;
+ 448          ////            }       
+ 449          //      }       
+ 450          //}
+ 451          
+ 452          /*********************************************************************
+ 453          *********************************************************************/
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    692    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      5    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      10
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

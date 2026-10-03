@@ -1,0 +1,852 @@
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE FUNCTION
+OBJECT MODULE PLACED IN .\Objects\Function.obj
+COMPILER INVOKED BY: D:\Program Files\keil\C51\BIN\C51.EXE src\Function.c BROWSE INCDIR(.\src) DEBUG OBJECTEXTEND PRINT(
+                    -.\Listings\Function.lst) OBJECT(.\Objects\Function.obj)
+
+line level    source
+
+   1          //=============================================================================
+   2          //Name          :Function.c
+   3          //Purpose       :其它功能函数
+   4          //Version       :V1.0
+   5          //Author        :szl
+   6          //Date          :2015.05.26
+   7          //=============================================================================
+   8          #include "AllHeadFile.h"
+   9          //============================================================================= 
+  10          
+  11          bit     b32HzFlag = 0;
+  12          bit     b2HzFlag = 0;
+  13          
+  14          idata uchar Freq128Hz;
+  15          idata uchar SysFlag;
+  16          
+  17          idata uchar Mode;
+  18          idata uchar ProFlag;
+  19          idata uchar ProFlag1;
+  20          idata uchar ProFlag2;
+  21          idata uchar ProFlag3;
+  22          
+  23          xdata uchar BackTime;
+  24          xdata uchar SubMode;
+  25          
+  26          xdata uchar Second;
+  27          xdata uchar Minute;
+  28          xdata uchar Hour;
+  29          xdata uchar Day;
+  30          xdata uchar Month;
+  31          xdata uchar Year;
+  32          xdata uchar Week;
+  33          
+  34          idata uchar AlarmCnt;
+  35          idata uchar AlMinute[2];
+  36          idata uchar AlHour[2];
+  37          idata uchar AlMode[2];
+  38          xdata uchar PlayAlarmTime[2];
+  39          
+  40          xdata uchar DetectLow;
+  41          xdata uchar DetectCnt;
+  42          
+  43          xdata uchar DispLevel;
+  44          xdata uchar DispLv;
+  45          xdata uchar DispRv;
+  46          xdata uint DispRvBak;
+  47          
+  48          xdata uchar LightLv;
+  49          xdata uchar SoundLv;
+  50          
+  51          xdata uchar LightMode;
+  52          xdata uchar LightModeCnt;
+  53          xdata uchar PlayLight;
+  54          
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 2   
+
+  55          xdata uchar TimerState;
+  56          xdata uchar TimerSec;
+  57          xdata uchar TimerMin;
+  58          xdata uchar TimerSecBak;
+  59          xdata uchar TimerMinBak;
+  60          
+  61          xdata uint RandomNum;
+  62          
+  63          static void ReturnToNormalMode(void);
+  64          static void Timer(void);
+  65          
+  66          static void IncDispRbg(uint *led_rbg);
+  67          static void CheckPlayLightRGB(void);
+  68          static void DispLevelDetect(void);
+  69          static void CheckPlayDispLevel(void);
+  70          
+  71          
+  72          unsigned char code Lv_Tab[] =
+  73          {
+  74                  10,             //0 %10
+  75                  37,             //1 %20
+  76                  64,             //2 %30
+  77                  91,             //3 %40
+  78                  118,            //4 %50
+  79                  145,            //5 %50
+  80                  172,            //6 %50
+  81                  199,            //7 %50
+  82                  226,            //8 %50
+  83                  255             //9 %100
+  84          };
+  85          
+  86          unsigned char code Lv_Tab1[] =
+  87          {
+  88                  11,             //0 
+  89                  18,             //1 
+  90                  44,             //2
+  91                  61,             //3
+  92                  77,             //4
+  93                  94,             //5
+  94                  110,            //6
+  95                  127,            //7
+  96                  143,            //8
+  97                  160             //9 %100
+  98          };
+  99          
+ 100          unsigned char code Lv_Tab2[] =
+ 101          {
+ 102                  46,             //0 
+ 103                  64,             //1 
+ 104                  82,             //2
+ 105                  100,            //3
+ 106                  118,            //4
+ 107                  136,            //5
+ 108                  154,            //6
+ 109                  172,            //7
+ 110                  190,            //8
+ 111                  255             //9 %100
+ 112          
+ 113          //      10,             //0 
+ 114          //      21,             //1 
+ 115          //      32,             //2
+ 116          //      43,             //3
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 3   
+
+ 117          //      54,             //4
+ 118          //      65,             //5
+ 119          //      76,             //6
+ 120          //      87,             //7
+ 121          //      98,             //8
+ 122          //      255             //9 %100
+ 123          };
+ 124          
+ 125          //=============================================================================
+ 126          //功能：初始化
+ 127          //输入参数：无
+ 128          //输出参数：无
+ 129          //备注： 
+ 130          //=============================================================================
+ 131          void InitData(void)
+ 132          {
+ 133   1              RandomNum = 5684;
+ 134   1              SysFlag = 0;
+ 135   1              ProFlag = 0;
+ 136   1              ProFlag1 = D_LightOn;
+ 137   1              ProFlag2 = 0;
+ 138   1              ProFlag3 = 0;
+ 139   1              
+ 140   1              AlarmCnt = 0;
+ 141   1              AlMinute[0] = 0;
+ 142   1              AlHour[0] = 6;
+ 143   1              AlMode[0] = 2;
+ 144   1              AlMinute[1] = 0;
+ 145   1              AlHour[1] = 18;
+ 146   1              AlMode[1] = 2;
+ 147   1              
+ 148   1              DispLevel = 255;        
+ 149   1              DispLevel1 = 160;       //255;
+ 150   1              DispLv = 9;
+ 151   1              LightLv = 9;
+ 152   1              DispRv = 255;
+ 153   1              SoundLv = 4;
+ 154   1              
+ 155   1              LightMode = 0;
+ 156   1              
+ 157   1              Second = 0;
+ 158   1              Minute = 0;
+ 159   1              Hour = 0;
+ 160   1              Day = 1;
+ 161   1              Month = 1;
+ 162   1              Year = 25;
+ 163   1              AdjustWeek();
+ 164   1              
+ 165   1              IrKeyCode = 0xff;
+ 166   1              TempNum[1] = TEMP_ERR;
+ 167   1      }
+ 168          //=============================================================================
+ 169          //功能：时基函数
+ 170          //输入参数：无
+ 171          //输出参数：无
+ 172          //备注：
+ 173          //=============================================================================
+ 174          void TimerBase(void)
+ 175          {
+ 176   1              ProFlag |= D_2HzFlag;
+ 177   1              ProFlag ^= D_HalfSecFlag;
+ 178   1              if(ProFlag&D_HalfSecFlag)               
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 4   
+
+ 179   1              {       // clr
+ 180   2                      ProFlag &= ~D_ResetSec; 
+ 181   2                      TimerState &= ~D_TimerSec;
+ 182   2              }               
+ 183   1              else
+ 184   1              {       //disp
+ 185   2                      ClockTime();
+ 186   2                      AlarmTime();
+ 187   2                      Timer();
+ 188   2                      CheckReadyRFC();
+ 189   2                      ReturnToNormalMode();
+ 190   2              }  
+ 191   1      }
+ 192          
+ 193          //=============================================================================
+ 194          //功能：时基函数
+ 195          //输入参数：无
+ 196          //输出参数：无
+ 197          //备注：
+ 198          //=============================================================================
+ 199          void Timer32HzPro(void)
+ 200          {
+ 201   1              CheckPlayAlarm();
+ 202   1              CheckPlayLightRGB();
+ 203   1              if(LightMode==12)
+ 204   1              {
+ 205   2                      CheckPlayLightRGB();
+ 206   2                      CheckPlayLightRGB();
+ 207   2                      CheckPlayLightRGB();
+ 208   2                      CheckPlayLightRGB();
+ 209   2                      CheckPlayLightRGB();
+ 210   2                      CheckPlayLightRGB();
+ 211   2                      CheckPlayLightRGB();
+ 212   2                      CheckPlayLightRGB();
+ 213   2                      CheckPlayLightRGB();
+ 214   2              }       
+ 215   1              CheckPlayDispLevel();
+ 216   1              DispLevelDetect();
+ 217   1      
+ 218   1              Gxhtv4Server();
+ 219   1              CheckReleaseIrHold();
+ 220   1              DebounceCnt++;
+ 221   1              Scankey();      
+ 222   1              if(KeyCode!=NONE_KEY)
+ 223   1                      KeyDecode();            
+ 224   1      }
+ 225          
+ 226          //=============================================================================
+ 227          //功能：
+ 228          //输入参数：无
+ 229          //输出参数：无
+ 230          //
+ 231          //=============================================================================
+ 232          static void ReturnToNormalMode(void)
+ 233          {
+ 234   1              if((Mode==M_PowerOff)||(Mode==M_Timer))
+ 235   1                      return;
+ 236   1              
+ 237   1              if(BackTime)
+ 238   1              {
+ 239   2                      BackTime--;
+ 240   2                      if(BackTime==0)
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 5   
+
+ 241   2                      {
+ 242   3                              if(Mode!=M_Normal)
+ 243   3                              {       
+ 244   4                                      ChangeToNormal();       
+ 245   4                              }       
+ 246   3                      }                       
+ 247   2              }                                       
+ 248   1      }
+ 249          
+ 250          //=============================================================================
+ 251          //功能：
+ 252          //输入参数：无
+ 253          //输出参数：无
+ 254          //
+ 255          //=============================================================================
+ 256          void TurnPowerOff(void)
+ 257          {
+ 258   1              CheckStopAlarm();
+ 259   1              Mode = M_PowerOff;
+ 260   1      //      ProFlag3 = 0;
+ 261   1              ProFlag3 &= ~(D_PlayDispLv|D_PlayDispRgb|D_PlayDispMode);
+ 262   1              ClearTimer();
+ 263   1              IO_CON = 1;
+ 264   1              PWM_ALL_Off();
+ 265   1              Gxhtv4PowerOff();
+ 266   1              DispAllLed(0);
+ 267   1      }
+ 268          
+ 269          void TurnPowerOn(void)
+ 270          {
+ 271   1              IO_CON = 0;
+ 272   1              DelayNOP(100);
+ 273   1              DetectCnt = 3;
+ 274   1              Gxhtv4PowerOn();
+ 275   1              ChangeToNormal();
+ 276   1      }
+ 277          
+ 278          void CheckPowerOnWithAlarm(void)
+ 279          {
+ 280   1              if(Mode)
+ 281   1                      return;
+ 282   1              
+ 283   1              TurnPowerOn();          
+ 284   1      }
+ 285          
+ 286          //=============================================================================
+ 287          //功能：
+ 288          //输入参数：无
+ 289          //输出参数：无
+ 290          //
+ 291          //=============================================================================
+ 292          void TurnLightOn(void)
+ 293          {
+ 294   1              ProFlag1 |= D_LightOn;
+ 295   1              DispAllLight(1);
+ 296   1              TurnLightMode();
+ 297   1      }
+ 298          
+ 299          void TurnLightOff(void)
+ 300          {
+ 301   1              ProFlag1 &= ~D_LightOn;
+ 302   1              ProFlag3 &= ~(D_PlayDispRgb1|D_PlayDispMode1);
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 6   
+
+ 303   1              DispAllLight(0);
+ 304   1      }
+ 305          
+ 306          void TurnLightOnOff(void)
+ 307          {
+ 308   1              if(ProFlag1&D_LightOn)
+ 309   1                      TurnLightOff(); 
+ 310   1              else
+ 311   1                      TurnLightOn();  
+ 312   1      }
+ 313          //=============================================================================
+ 314          //功能：
+ 315          //输入参数：无
+ 316          //输出参数：无
+ 317          //
+ 318          //=============================================================================
+ 319          void TurnLightMode(void)
+ 320          {
+ 321   1              ProFlag3 &= ~(D_PlayDispRgb1|D_PlayDispMode1);
+ 322   1              switch(LightMode)
+ 323   1              {
+ 324   2                      case 0:
+ 325   2                              SetAllDispRgb1(0);      //红
+ 326   2                              break;
+ 327   2                      case 1:
+ 328   2                              SetAllDispRgb1(8);      //白
+ 329   2                              break;  
+ 330   2                      case 2: 
+ 331   2                              SetAllDispRgb1(3);      //绿
+ 332   2                              break;  
+ 333   2                      case 3: 
+ 334   2                              SetAllDispRgb1(2);      //黄
+ 335   2                              break;  
+ 336   2                      case 4: 
+ 337   2                              SetAllDispRgb1(6);      //粉
+ 338   2                              break;  
+ 339   2                      case 5: 
+ 340   2                              SetAllDispRgb1(1);      //橙
+ 341   2                              break;          
+ 342   2                      case 6: 
+ 343   2                              SetAllDispRgb1(4);      //蓝
+ 344   2                              break;          
+ 345   2                      case 7: 
+ 346   2                              LightModeCnt = 0;
+ 347   2                              PlayLight = 0;  
+ 348   2                              SetAllDispRgb1(0);      //全色渐变
+ 349   2                              ProFlag3 |= D_PlayDispMode1;
+ 350   2                              break;  
+ 351   2                      case 8:
+ 352   2                              PlayLight = 5;  
+ 353   2                              SetAllDispRgb1_ud();            //上-下渐变
+ 354   2                              ProFlag3 |= D_PlayDispMode1;
+ 355   2                              break;                          
+ 356   2                      case 9:
+ 357   2                              PlayLight = 15; 
+ 358   2                              SetAllDispRgb1_gl();            //左-右渐变
+ 359   2                              ProFlag3 |= D_PlayDispMode1;
+ 360   2                              break;                  
+ 361   2                      case 10:
+ 362   2                              SetDispRamdon1();               //随机渐变
+ 363   2                              ProFlag3 |= D_PlayDispMode1;
+ 364   2                              break;  
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 7   
+
+ 365   2                      case 11:
+ 366   2      //                      PlayLight = 5;  
+ 367   2      //                      SetAllDispRgb1_rol();           //循环
+ 368   2      //                      ProFlag3 |= D_PlayDispMode1;
+ 369   2      //                      break;  
+ 370   2                      case 12:
+ 371   2                              PlayLight = 5;  
+ 372   2                              SetAllDispRgb1_rol_f();         //循环
+ 373   2                              ProFlag3 |= D_PlayDispMode1;
+ 374   2                              break;                                  
+ 375   2                      default:
+ 376   2                              break;          
+ 377   2              }
+ 378   1      }
+ 379          
+ 380          //=============================================================================
+ 381          void IncLightMode(void)
+ 382          {
+ 383   1              if((ProFlag1&D_LightOn)==0)
+ 384   1                      return;
+ 385   1                      
+ 386   1              LightMode++;
+ 387   1              if(LightMode>12)
+ 388   1                      LightMode = 0;
+ 389   1              TurnLightMode();        
+ 390   1      }
+ 391          
+ 392          //=============================================================================
+ 393          void DecLightMode(void)
+ 394          {
+ 395   1              if((ProFlag1&D_LightOn)==0)
+ 396   1                      return;
+ 397   1              if(LightMode==0)        
+ 398   1                      LightMode = 12;
+ 399   1              else
+ 400   1                      LightMode--;    
+ 401   1              TurnLightMode();        
+ 402   1      }
+ 403          
+ 404          //=============================================================================
+ 405          static void IncDispRbg(uint *led_rbg)
+ 406          {
+ 407   1              (*led_rbg)++;
+ 408   1              if((*led_rbg)>359)
+ 409   1                      (*led_rbg) = 0;
+ 410   1      }
+ 411          
+ 412          //=============================================================================
+ 413          //功能：
+ 414          //输入参数：无
+ 415          //输出参数：无
+ 416          //
+ 417          //=============================================================================
+ 418          static void CheckPlayLightRGB(void)
+ 419          {
+ 420   1              uchar i,zf;
+ 421   1              
+ 422   1              LightModeCnt++;
+ 423   1              if((LightModeCnt&0x01)&&(LightMode==7))
+ 424   1                      return; 
+ 425   1              
+ 426   1              if(ProFlag3&D_PlayDispMode1)
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 8   
+
+ 427   1              {
+ 428   2                      if(ProFlag3&D_PlayDispRgb1)
+ 429   2                      {               
+ 430   3                              zf = 36;
+ 431   3                              for(i=0;i<18;i++)
+ 432   3                              {
+ 433   4                                      if(PlayRgb6[i]==0)
+ 434   4                                              zf--;   
+ 435   4                                      else
+ 436   4                                      {
+ 437   5                                              PlayRgb6[i]--;
+ 438   5                                              IncDispRbg(&Led_GRB6[i]);
+ 439   5                                      }
+ 440   4                                      if(PlayRgb7[i]==0)
+ 441   4                                              zf--;   
+ 442   4                                      else
+ 443   4                                      {
+ 444   5                                              PlayRgb7[i]--;
+ 445   5                                              IncDispRbg(&Led_GRB7[i]);
+ 446   5                                      }
+ 447   4                              }
+ 448   3                              
+ 449   3                              SysFlag |= D_DispUpdata1;
+ 450   3                              if(zf==0)
+ 451   3                              {
+ 452   4                                      ProFlag3 &= ~D_PlayDispRgb1;
+ 453   4                              }       
+ 454   3                      }       
+ 455   2                      
+ 456   2                      if((ProFlag3&D_PlayDispRgb1)==0)        
+ 457   2                      {
+ 458   3                                      ProFlag3 |= D_PlayDispRgb1;
+ 459   3                                      if(LightMode==7)
+ 460   3                                      {
+ 461   4                                              PlayLight++;
+ 462   4                                              if(PlayLight>8)
+ 463   4                                                      PlayLight = 0;
+ 464   4                                              SetAllDispRgb1_S();     
+ 465   4                                      }       
+ 466   3                                      else if(LightMode==8)
+ 467   3                                      {
+ 468   4                                              PlayLight++;
+ 469   4                                              if(PlayLight>17)
+ 470   4                                                      PlayLight = 0;
+ 471   4                                              SetAllDispRgb1_ud_S();  
+ 472   4                                      }
+ 473   3                                      else if(LightMode==9)
+ 474   3                                      {
+ 475   4                                              PlayLight++;
+ 476   4                                              if(PlayLight>26)
+ 477   4                                                      PlayLight = 0;
+ 478   4                                              SetAllDispRgb1_gl_S();  
+ 479   4                                      }       
+ 480   3                                      else if(LightMode==10)
+ 481   3                                      {
+ 482   4                                              SetDispRamdon1_S();     
+ 483   4                                      }       
+ 484   3      //                              else if(LightMode==11)
+ 485   3      //                              {
+ 486   3      //                                      SetAllDispRgb1_rol_f(); 
+ 487   3      //                              }
+ 488   3                                      else if((LightMode==11)||(LightMode==12))
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 9   
+
+ 489   3                                      {
+ 490   4                                              SetAllDispRgb1_rol_f_S();       
+ 491   4                                      }
+ 492   3                      }
+ 493   2              }                       
+ 494   1      }
+ 495          
+ 496          //=============================================================================
+ 497          //功能：
+ 498          //输入参数：无
+ 499          //输出参数：无
+ 500          //
+ 501          //============================================================================= 
+ 502          static void DispLevelDetect(void)
+ 503          {
+ 504   1              uchar i;
+ 505   1              uint tmpadc16;
+ 506   1              
+ 507   1              DetectCnt++;
+ 508   1              if(DetectCnt&0x03)      
+ 509   1                      return;
+ 510   1                      
+ 511   1              tmpadc16 = 0;
+ 512   1              for(i=0;i<8;i++)
+ 513   1              {
+ 514   2                      tmpadc16 += ADC_Convert(ADCHS27);
+ 515   2                      DelayNOP(20);
+ 516   2              }       
+ 517   1              tmpadc16 = tmpadc16/8;  
+ 518   1              
+ 519   1              if(DispRvBak>tmpadc16)
+ 520   1                      i = DispRvBak-tmpadc16;
+ 521   1              else
+ 522   1                      i = tmpadc16-DispRvBak;
+ 523   1              if(i>3)
+ 524   1                      DispRvBak = tmpadc16;
+ 525   1              
+ 526   1              tmpadc16 = DispRvBak/8;
+ 527   1                      
+ 528   1              if(tmpadc16>254)
+ 529   1                      tmpadc16 = 254; 
+ 530   1                      
+ 531   1              DispRv = tmpadc16&0xff;
+ 532   1      
+ 533   1              for(i=0;i<10;i++)
+ 534   1              {
+ 535   2                      if(DispRv<=Lv_Tab2[i])
+ 536   2                              break;
+ 537   2              }
+ 538   1              
+ 539   1              if(i>9)
+ 540   1                      i=9;
+ 541   1              
+ 542   1              DispRv = Lv_Tab[i];
+ 543   1              
+ 544   1              if((ProFlag1&D_AutoDimmer)==0)
+ 545   1                      return;
+ 546   1              if(DispLevel!=DispRv)
+ 547   1              {       
+ 548   2                      ProFlag3 |= D_PlayDispLv;
+ 549   2              }
+ 550   1              
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 10  
+
+ 551   1      }       
+ 552          
+ 553          //=============================================================================
+ 554          //功能：
+ 555          //输入参数：无
+ 556          //输出参数：无
+ 557          //
+ 558          //============================================================================= 
+ 559          static void CheckPlayDispLevel(void)
+ 560          {
+ 561   1              uchar i;
+ 562   1              if(ProFlag3&D_PlayDispLv)
+ 563   1              {
+ 564   2                      if(DispLevel>DispRv)
+ 565   2                      {
+ 566   3                              i = DispLevel-DispRv;
+ 567   3                              if(i>63)
+ 568   3                                      DispLevel -= 8; 
+ 569   3                              else if(i>15)
+ 570   3                                      DispLevel -= 4;         
+ 571   3                              else
+ 572   3                                      DispLevel--;    
+ 573   3                              SysFlag |= D_DispUpdata;        
+ 574   3                      }       
+ 575   2                      else if(DispLevel<DispRv)
+ 576   2                      {       
+ 577   3                              i = DispRv-DispLevel;
+ 578   3                              if(i>63)
+ 579   3                                      DispLevel += 8; 
+ 580   3                              else if(i>15)
+ 581   3                                      DispLevel += 4;         
+ 582   3                              else
+ 583   3                                      DispLevel++;    
+ 584   3                              SysFlag |= D_DispUpdata;
+ 585   3                      }               
+ 586   2                      else 
+ 587   2                      {       
+ 588   3                              ProFlag3 &= ~D_PlayDispLv;
+ 589   3                      }       
+ 590   2              }       
+ 591   1      }       
+ 592          //=============================================================================
+ 593          void IncDispLv(void)
+ 594          {
+ 595   1              if(ProFlag1&D_AutoDimmer)
+ 596   1                      return;
+ 597   1              ProFlag3 &= ~D_PlayDispLv;      
+ 598   1              DispLv++;
+ 599   1              if(DispLv>9)    
+ 600   1                      DispLv = 0;
+ 601   1              DispLevel = Lv_Tab[DispLv];
+ 602   1              SysFlag |= D_DispUpdata;        
+ 603   1      }
+ 604          
+ 605          void DecDispLv(void)
+ 606          {
+ 607   1              if(ProFlag1&D_AutoDimmer)
+ 608   1                      return;
+ 609   1              ProFlag3 &= ~D_PlayDispLv;      
+ 610   1              if(DispLv==0)
+ 611   1                      DispLv = 9;
+ 612   1              else
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 11  
+
+ 613   1                      DispLv--;       
+ 614   1              DispLevel = Lv_Tab[DispLv];
+ 615   1              SysFlag |= D_DispUpdata;        
+ 616   1      }
+ 617          
+ 618          //=============================================================================
+ 619          void TurnAutoDimmerOnOff(void)
+ 620          {
+ 621   1              ProFlag3 &= ~D_PlayDispLv;
+ 622   1              ProFlag1 ^= D_AutoDimmer;
+ 623   1              
+ 624   1              if(ProFlag1&D_AutoDimmer)
+ 625   1                      DispLevel = DispRv;
+ 626   1              else
+ 627   1                      DispLevel = Lv_Tab[DispLv];
+ 628   1              SysFlag |= D_DispUpdata;        
+ 629   1      }
+ 630          
+ 631          //=============================================================================
+ 632          void IncLightLv(void)
+ 633          {
+ 634   1      //      ProFlag3 &= ~D_PlayDispLv1;     
+ 635   1              LightLv++;
+ 636   1              if(LightLv>9)   
+ 637   1                      LightLv = 0;
+ 638   1              DispLevel1 = Lv_Tab1[LightLv];
+ 639   1              SysFlag |= D_DispUpdata1;       
+ 640   1      }
+ 641          
+ 642          //void DecLightLv(void)
+ 643          //{
+ 644          //      ProFlag3 &= ~D_PlayDispLv1;     
+ 645          //      if(LightLv==0)
+ 646          //              LightLv = 9;
+ 647          //      else
+ 648          //              LightLv--;
+ 649          //      DispLevel1 = Lv_Tab1[LightLv];
+ 650          //      SysFlag |= D_DispUpdata1;       
+ 651          //}
+ 652          
+ 653          //=============================================================================
+ 654          //功能：
+ 655          //输入参数：无
+ 656          //输出参数：无
+ 657          //
+ 658          //=============================================================================
+ 659          void CheckDcOn(void)
+ 660          {
+ 661   1              if(SysFlag&D_IrEn)
+ 662   1                      return;
+ 663   1              
+ 664   1              if(IO_DC_DET==1)        
+ 665   1              {
+ 666   2                      TurnIrOn();
+ 667   2                      Led_TurnOn();
+ 668   2                      TurnPowerOn();
+ 669   2                      if(ProFlag1&D_LightOn)
+ 670   2                              TurnLightOn();
+ 671   2              }       
+ 672   1      }
+ 673          
+ 674          void CheckDcOff(void)
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 12  
+
+ 675          {
+ 676   1              if(IO_DC_DET==0)        
+ 677   1              {
+ 678   2                      DetectLow++;
+ 679   2                      if(DetectLow>2)
+ 680   2                      {
+ 681   3                              TurnIrOff();
+ 682   3                              Led_TurnOff();
+ 683   3                              StopAlarm();
+ 684   3                              ProFlag3 = 0;
+ 685   3                              TurnPowerOff();
+ 686   3                      }       
+ 687   2              }
+ 688   1              else
+ 689   1              {
+ 690   2                      DetectLow = 0;
+ 691   2              }       
+ 692   1      }
+ 693          
+ 694          //=============================================================================
+ 695          //功能：
+ 696          //输入参数：无
+ 697          //输出参数：无
+ 698          //
+ 699          //=============================================================================
+ 700          static void Timer(void)
+ 701          {
+ 702   1              if(TimerState&D_TimerOn)
+ 703   1              {
+ 704   2                      if(TimerState&D_TimerSec)
+ 705   2                              return;
+ 706   2                              
+ 707   2                      if(TimerState&D_TimerDown)
+ 708   2                      {
+ 709   3                              if(TimerSec==0)
+ 710   3                              {
+ 711   4                                      TimerSec = 59;
+ 712   4                                      TimerMin--;
+ 713   4                              }       
+ 714   3                              else
+ 715   3                              {
+ 716   4                                      TimerSec--;
+ 717   4                                      if((TimerSec==0)&&(TimerMin==0))
+ 718   4                                      {
+ 719   5                                              TimerState = D_TimerDown;
+ 720   5                                              PlayAlarm(D_PlayTimer);
+ 721   5                                              ProFlag |= D_AdjustFlag;
+ 722   5                                      }       
+ 723   4                              }       
+ 724   3                      }       
+ 725   2                      else 
+ 726   2                      {
+ 727   3                              TimerSec++;
+ 728   3                              if(TimerSec>59)
+ 729   3                              {
+ 730   4                                      TimerSec = 0;
+ 731   4                                      TimerMin++;
+ 732   4                                      if(TimerMin>99)
+ 733   4                                      {
+ 734   5                                              TimerMin = 99;
+ 735   5                                              TimerSec = 59;
+ 736   5                                              TimerState = 0;
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 13  
+
+ 737   5                                      }       
+ 738   4                              }       
+ 739   3                      }               
+ 740   2              }       
+ 741   1      }
+ 742          
+ 743          void TurnTimerOnOff(void)
+ 744          {
+ 745   1              TimerState |= D_TimerSec;
+ 746   1              TimerState ^= D_TimerOn;
+ 747   1      }
+ 748          
+ 749          void CheckTimerUpDown(void)
+ 750          {
+ 751   1              TimerSecBak = TimerSec;
+ 752   1              TimerMinBak = TimerMin;
+ 753   1              if(TimerSec||TimerMin)
+ 754   1                      TimerState = D_TimerDown;
+ 755   1              else
+ 756   1                      TimerState = 0; 
+ 757   1      }
+ 758          
+ 759          void ClearTimer(void)
+ 760          {
+ 761   1              TimerState = 0;
+ 762   1              TimerSec = 0;
+ 763   1              TimerMin = 0;
+ 764   1              TimerSecBak = 0;
+ 765   1              TimerMinBak = 0;
+ 766   1      }
+ 767          
+ 768          void ResetTimer(void)
+ 769          {
+ 770   1              TimerState &= D_TimerDown;
+ 771   1              TimerSec = TimerSecBak;
+ 772   1              TimerMin = TimerMinBak;
+ 773   1      }
+ 774          
+ 775          //=============================================================================
+ 776          //功能：随机数
+ 777          //输入参数：
+ 778          //输出参数：无
+ 779          //=============================================================================
+ 780          void Random(void)
+ 781          {
+ 782   1              unsigned  int d;
+ 783   1              unsigned  int temp;
+ 784   1              temp=RandomNum^(RandomNum<<1);  
+ 785   1              d=(RandomNum<<3)^(RandomNum<<12);
+ 786   1              d^=temp;
+ 787   1              RandomNum<<=1;
+ 788   1              if(d&(0x8000))  RandomNum++;
+ 789   1      }
+ 790                  
+ 791          //=============================================================================
+ 792          //功能：延时，约6us
+ 793          //输入参数：延时长度
+ 794          //输出参数：无
+ 795          //=============================================================================
+ 796          void DelayNOP(uint Time)
+ 797          {
+ 798   1              do{
+C51 COMPILER V9.00   FUNCTION                                                              01/25/2026 17:20:40 PAGE 14  
+
+ 799   2                      _nop_();
+ 800   2              }while( --Time );       
+ 801   1      }
+ 802          //=============================================================================
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1745    ----
+   CONSTANT SIZE    =     30    ----
+   XDATA SIZE       =     30    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       5
+   IDATA SIZE       =     14    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

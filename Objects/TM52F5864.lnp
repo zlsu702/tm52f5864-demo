@@ -1,0 +1,17 @@
+".\Objects\STARTUP_TENX52.obj",
+".\Objects\main.obj",
+".\Objects\alarm.obj",
+".\Objects\Function.obj",
+".\Objects\gxhtv4.obj",
+".\Objects\Isr.obj",
+".\Objects\keycode.obj",
+".\Objects\Led.obj",
+".\Objects\REFRESH.obj",
+".\Objects\rf.obj",
+".\Objects\Scankey.obj",
+".\Objects\SysInit.obj",
+".\Objects\time.obj" 
+TO ".\Objects\TM52F5864" 
+PRINT(".\Listings\TM52F5864.m51") RAMSIZE(256) 
+CODE( 0x00-0x32,0x3B-0x2CFF,0x3000-0x3FEF )
+XDATA( 0xFD00-0xFFFF )

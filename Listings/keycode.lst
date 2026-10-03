@@ -1,0 +1,482 @@
+C51 COMPILER V9.00   KEYCODE                                                               01/25/2026 17:20:40 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE KEYCODE
+OBJECT MODULE PLACED IN .\Objects\keycode.obj
+COMPILER INVOKED BY: D:\Program Files\keil\C51\BIN\C51.EXE src\keycode.c BROWSE INCDIR(.\src) DEBUG OBJECTEXTEND PRINT(.
+                    -\Listings\keycode.lst) OBJECT(.\Objects\keycode.obj)
+
+line level    source
+
+   1          //=============================================================================
+   2          //Name          :keycode.c
+   3          //Purpose       :keycode
+   4          //Version       :V1.0
+   5          //Author        :
+   6          //Date          :2022.05.24
+   7          //=============================================================================
+   8          #include "AllHeadFile.h"
+   9          //=============================================================================
+  10          static void NormalDecode(void);
+  11          static void SetTimeDecode(void);
+  12          static void AlarmDecode(void);
+  13          static void SetAlarmDecode(void);
+  14          static void SetDispDecode(void);
+  15          static void SetLightDecode(void);
+  16          static void TimerDecode(void);
+  17          //=============================================================================
+  18          //功能：按键处理
+  19          //输入参数：源数据地址、字符数
+  20          //输出参数：无
+  21          //=============================================================================
+  22          void KeyDecode(void)
+  23          {
+  24   1              if(Mode==M_PowerOff)    
+  25   1                      return;
+  26   1                      
+  27   1              if(ProFlag2>D_PlayKeyTone)
+  28   1              {
+  29   2                      CheckStopAlarm();
+  30   2                      return;
+  31   2              }
+  32   1              
+  33   1              if((KeyState==(KST_RELEASE|KST_MULT))==0)
+  34   1                      PlayKeyTone();  
+  35   1                      
+  36   1              if((KeyCode==KEY_LIGHT)&&(Mode!=M_SetLight))
+  37   1              {
+  38   2                      TurnLightOnOff();
+  39   2                      return; 
+  40   2              }       
+  41   1              
+  42   1              switch(Mode)    
+  43   1              {
+  44   2                      case M_Normal:
+  45   2                              NormalDecode();
+  46   2                              break;
+  47   2                      case M_SetTime:
+  48   2                              SetTimeDecode();
+  49   2                              break;
+  50   2                      case M_Alarm:
+  51   2                              AlarmDecode();
+  52   2                              break;          
+  53   2                      case M_SetAlarm:
+  54   2                              SetAlarmDecode();
+C51 COMPILER V9.00   KEYCODE                                                               01/25/2026 17:20:40 PAGE 2   
+
+  55   2                              break;  
+  56   2                      case M_SetDisp:
+  57   2                              SetDispDecode();
+  58   2                              break;  
+  59   2                      case M_SetLight:        
+  60   2                              SetLightDecode();
+  61   2                              break;
+  62   2                      case M_Timer:   
+  63   2                              TimerDecode();
+  64   2                              break;  
+  65   2                      default:
+  66   2                              ProFlag &= ~D_AdjustFlag;
+  67   2                              break;  
+  68   2              }       
+  69   1      }       
+  70          //=============================================================================
+  71          //功能：
+  72          //输入参数：源数据地址、字符数
+  73          //输出参数：无
+  74          //=============================================================================
+  75          void SetBackTime(uchar back_time)
+  76          {
+  77   1              ProFlag |= D_AdjustFlag;
+  78   1              BackTime = back_time;
+  79   1              if(ProFlag&D_HalfSecFlag)
+  80   1                      BackTime++;
+  81   1      }
+  82          
+  83          //=============================================================================
+  84          //功能：
+  85          //输入参数：无
+  86          //输出参数：无
+  87          //
+  88          //=============================================================================
+  89          void ChangeToNormal(void)
+  90          {
+  91   1              Mode = M_Normal;        
+  92   1              SubMode = 0;
+  93   1              ProFlag |= D_AdjustFlag;
+  94   1      }
+  95          
+  96          void ResetSecond(void)
+  97          {
+  98   1              ProFlag |= D_ResetSec;
+  99   1              Second = 0;
+ 100   1      }
+ 101          
+ 102          void ChangeToSetTime(void)
+ 103          {
+ 104   1              SetBackTime(10);
+ 105   1              Mode = M_SetTime;
+ 106   1              SubMode = 0;
+ 107   1      }
+ 108          
+ 109          void ChangeToAlarm(void)
+ 110          {
+ 111   1              Mode = M_Alarm; 
+ 112   1              SubMode = 0;
+ 113   1              SetBackTime(4);
+ 114   1      }
+ 115          
+ 116          void ChangeToSetAlarm(void)
+C51 COMPILER V9.00   KEYCODE                                                               01/25/2026 17:20:40 PAGE 3   
+
+ 117          {
+ 118   1              Mode = M_SetAlarm;      
+ 119   1              SubMode = 0;
+ 120   1              SetBackTime(10);
+ 121   1      }
+ 122          
+ 123          //=============================================================================
+ 124          //功能：
+ 125          //输入参数：源数据地址、字符数
+ 126          //输出参数：无
+ 127          //=============================================================================
+ 128          static void NormalDecode(void)
+ 129          {
+ 130   1              switch(KeyCode)
+ 131   1              {
+ 132   2                      case KEY_SET:
+ 133   2                              ChangeToSetTime();
+ 134   2                              break;  
+ 135   2                      case KEY_ALARM:
+ 136   2                              AlarmCnt = 0;
+ 137   2                              ChangeToAlarm();
+ 138   2                              break;
+ 139   2                      case KEY_HSET:
+ 140   2                              SetBackTime(4);
+ 141   2                              Mode = M_SetDisp;
+ 142   2                              break;  
+ 143   2      //              case KEY_HUP:
+ 144   2                      case KEY_HDOWN:
+ 145   2                              ProFlag1 ^=D_Dst;
+ 146   2                              ProFlag |= D_AdjustFlag;
+ 147   2                              if(ProFlag1&D_Dst)
+ 148   2                                      AdcOneHour();
+ 149   2                              else
+ 150   2                                      SbcOneHour();   
+ 151   2                              break;                  
+ 152   2                      case KEY_HLIGHT:
+ 153   2                              if(ProFlag1&D_LightOn)
+ 154   2                              {
+ 155   3                                      SetBackTime(4);
+ 156   3                                      Mode = M_SetLight;
+ 157   3                              }       
+ 158   2                              break;
+ 159   2                      default:
+ 160   2                              ProFlag &= ~D_AdjustFlag;
+ 161   2                              break;          
+ 162   2              }
+ 163   1      }
+ 164          //=============================================================================
+ 165          void IncSetTimeNum(void)
+ 166          {
+ 167   1              SetBackTime(10);
+ 168   1              switch(SubMode)
+ 169   1              {
+ 170   2                      case 0:
+ 171   2                              ProFlag ^= D_24Hour;
+ 172   2                              break;
+ 173   2                      case 1:
+ 174   2                              IncRealHour();
+ 175   2                              break;
+ 176   2                      case 2:
+ 177   2                              ResetSecond();  
+ 178   2                              IncRealMin();
+C51 COMPILER V9.00   KEYCODE                                                               01/25/2026 17:20:40 PAGE 4   
+
+ 179   2                              break;
+ 180   2                      case 3:
+ 181   2                              IncRealYear();
+ 182   2                              AdjustWeekDay();
+ 183   2                              break;
+ 184   2                      case 4:
+ 185   2                              IncRealMonth();
+ 186   2                              AdjustWeekDay();
+ 187   2                              break;
+ 188   2                      case 5:
+ 189   2                              IncRealDay();
+ 190   2                              AdjustWeek();
+ 191   2                              break;
+ 192   2                      case 6:
+ 193   2                              ProFlag1 ^= D_TempF;
+ 194   2                              break;  
+ 195   2                      default:
+ 196   2                              break;  
+ 197   2              }
+ 198   1      }
+ 199          //=============================================================================
+ 200          void DecSetTimeNum(void)
+ 201          {
+ 202   1              SetBackTime(10);
+ 203   1              switch(SubMode)
+ 204   1              {
+ 205   2                      case 0:
+ 206   2                              ProFlag ^= D_24Hour;
+ 207   2                              break;
+ 208   2                      case 1:
+ 209   2                              DecRealHour();
+ 210   2                              break;
+ 211   2                      case 2:
+ 212   2                              ResetSecond();  
+ 213   2                              DecRealMin();
+ 214   2                              break;
+ 215   2                      case 3:
+ 216   2                              DecRealYear();
+ 217   2                              AdjustWeekDay();
+ 218   2                              break;
+ 219   2                      case 4:
+ 220   2                              DecRealMonth();
+ 221   2                              AdjustWeekDay();
+ 222   2                              break;
+ 223   2                      case 5:
+ 224   2                              DecRealDay();
+ 225   2                              AdjustWeek();
+ 226   2                              break;
+ 227   2                      case 6:
+ 228   2                              ProFlag1 ^= D_TempF;
+ 229   2                              break;  
+ 230   2                      default:
+ 231   2                              break;  
+ 232   2              }
+ 233   1      }
+ 234          //=============================================================================
+ 235          static void SetTimeDecode(void)
+ 236          {
+ 237   1              switch(KeyCode)
+ 238   1              {
+ 239   2                      case KEY_SET:
+ 240   2                              SetBackTime(10);
+C51 COMPILER V9.00   KEYCODE                                                               01/25/2026 17:20:40 PAGE 5   
+
+ 241   2                              SubMode++;
+ 242   2                              if(SubMode>6)
+ 243   2                                      ChangeToNormal();
+ 244   2                              break;
+ 245   2                      case KEY_UP:
+ 246   2                              IncSetTimeNum();
+ 247   2                              break;  
+ 248   2                      case KEY_DOWN:
+ 249   2                              DecSetTimeNum();
+ 250   2                              break;  
+ 251   2                      default:
+ 252   2                              ProFlag &= ~D_AdjustFlag;
+ 253   2                              break;          
+ 254   2              }
+ 255   1      }
+ 256          //=============================================================================
+ 257          static void AlarmDecode(void)
+ 258          {
+ 259   1              switch(KeyCode)
+ 260   1              {
+ 261   2                      case KEY_SET:
+ 262   2                              ChangeToSetAlarm();
+ 263   2                              break;  
+ 264   2                      case KEY_ALARM:
+ 265   2                              AlarmCnt ^= 0x01;
+ 266   2                              SetBackTime(4);
+ 267   2                              break;
+ 268   2                      default:
+ 269   2                              ProFlag &= ~D_AdjustFlag;
+ 270   2                              break;          
+ 271   2              }
+ 272   1      }
+ 273          //=============================================================================
+ 274          void IncSetAlarmNum(void)
+ 275          {
+ 276   1              SetBackTime(10);
+ 277   1              switch(SubMode)
+ 278   1              {
+ 279   2                      case 0:
+ 280   2                              TurnAlarmOnOff();
+ 281   2                              break;
+ 282   2                      case 1:
+ 283   2                              IncAlarmHour();
+ 284   2                              break;
+ 285   2                      case 2:
+ 286   2                              IncAlarmMinute();
+ 287   2                              break;
+ 288   2                      case 3:
+ 289   2                              IncAlarmMode();
+ 290   2                              break;
+ 291   2                      default:
+ 292   2                              break;                          
+ 293   2              }
+ 294   1      }
+ 295          //=============================================================================
+ 296          void DecSetAlarmNum(void)
+ 297          {
+ 298   1              SetBackTime(10);
+ 299   1              switch(SubMode)
+ 300   1              {
+ 301   2                      case 0:
+ 302   2                              TurnAlarmOnOff();
+C51 COMPILER V9.00   KEYCODE                                                               01/25/2026 17:20:40 PAGE 6   
+
+ 303   2                              break;
+ 304   2                      case 1:
+ 305   2                              DecAlarmHour();
+ 306   2                              break;
+ 307   2                      case 2:
+ 308   2                              DecAlarmMinute();
+ 309   2                              break;
+ 310   2                      case 3:
+ 311   2                              DecAlarmMode();
+ 312   2                              break;
+ 313   2                      default:
+ 314   2                              break;                          
+ 315   2              }
+ 316   1      }
+ 317          //=============================================================================
+ 318          static void SetAlarmDecode(void)
+ 319          {
+ 320   1              switch(KeyCode)
+ 321   1              {
+ 322   2                      case KEY_SET:
+ 323   2                              SetBackTime(10);
+ 324   2                              SubMode++;
+ 325   2                              if(SubMode>3)
+ 326   2                                      ChangeToAlarm();
+ 327   2                              break;
+ 328   2                      case KEY_UP:
+ 329   2                              IncSetAlarmNum();
+ 330   2                              break;  
+ 331   2                      case KEY_DOWN:
+ 332   2                              DecSetAlarmNum();
+ 333   2                              break;  
+ 334   2                      default:
+ 335   2                              ProFlag &= ~D_AdjustFlag;
+ 336   2                              break;          
+ 337   2              }
+ 338   1      }
+ 339          
+ 340          //=============================================================================
+ 341          static void SetDispDecode(void)
+ 342          {
+ 343   1              switch(KeyCode)
+ 344   1              {
+ 345   2                      case KEY_HSET:
+ 346   2      //                      ResetAdjActive();
+ 347   2                              SetBackTime(4);
+ 348   2                              TurnAutoDimmerOnOff();
+ 349   2                              break;  
+ 350   2                      case KEY_UP:
+ 351   2      //                      ResetAdjActive();
+ 352   2                              SetBackTime(4);
+ 353   2                              IncDispLv();
+ 354   2                              break;
+ 355   2                      case KEY_DOWN:
+ 356   2      //                      ResetAdjActive();
+ 357   2                              SetBackTime(4);
+ 358   2                              DecDispLv();
+ 359   2                              break;  
+ 360   2                      default:
+ 361   2                              ProFlag &= ~D_AdjustFlag;
+ 362   2                              break;          
+ 363   2              }
+ 364   1      }
+C51 COMPILER V9.00   KEYCODE                                                               01/25/2026 17:20:40 PAGE 7   
+
+ 365          
+ 366          //=============================================================================
+ 367          static void SetLightDecode(void)
+ 368          {
+ 369   1              switch(KeyCode)
+ 370   1              {
+ 371   2                      case KEY_UP:
+ 372   2      //                      ResetAdjActive();
+ 373   2                              SetBackTime(4);
+ 374   2                              IncLightMode();
+ 375   2                              break;
+ 376   2                      case KEY_DOWN:
+ 377   2      //                      ResetAdjActive();
+ 378   2                              SetBackTime(4);
+ 379   2                              DecLightMode();
+ 380   2                              break;  
+ 381   2                      default:
+ 382   2                              ProFlag &= ~D_AdjustFlag;
+ 383   2                              break;          
+ 384   2              }
+ 385   1      }
+ 386          
+ 387          //=============================================================================
+ 388          static void TimerDecode(void)
+ 389          {
+ 390   1              switch(KeyCode)
+ 391   1              {
+ 392   2                      case KEY_UP:
+ 393   2                              if((TimerState&D_TimerOn)==0)
+ 394   2                              {
+ 395   3                                      SetBackTime(10);
+ 396   3                                      if(KeyState==(KST_RELEASE|KST_MULT))
+ 397   3                                      {
+ 398   4                                              if(TimerMin<99)
+ 399   4                                                      TimerMin++;
+ 400   4                                              else if(TimerSec<59)
+ 401   4                                                      TimerSec++;     
+ 402   4                                      }       
+ 403   3                                      else if((TimerSec<59)||(TimerMin<99))
+ 404   3                                      {
+ 405   4                                              TimerSec++;
+ 406   4                                              if(TimerSec>59)
+ 407   4                                              {
+ 408   5                                                      TimerSec = 0;
+ 409   5                                                      TimerMin++;
+ 410   5                                              }       
+ 411   4                                      }       
+ 412   3                                      CheckTimerUpDown();
+ 413   3                              }
+ 414   2                              break;
+ 415   2                      case KEY_DOWN:
+ 416   2                              if((TimerState&D_TimerOn)==0)
+ 417   2                              {
+ 418   3                                      SetBackTime(10);
+ 419   3                                      if(KeyState==(KST_RELEASE|KST_MULT))
+ 420   3                                      {
+ 421   4                                              if(TimerMin)
+ 422   4                                                      TimerMin--;
+ 423   4                                              else if(TimerSec)
+ 424   4                                                      TimerSec--;     
+ 425   4                                      }       
+ 426   3                                      else if(TimerSec||TimerMin)
+C51 COMPILER V9.00   KEYCODE                                                               01/25/2026 17:20:40 PAGE 8   
+
+ 427   3                                      {
+ 428   4                                              if(TimerSec)
+ 429   4                                                      TimerSec--;
+ 430   4                                              else
+ 431   4                                              {
+ 432   5                                                      TimerSec = 59;
+ 433   5                                                      TimerMin--;
+ 434   5                                              }               
+ 435   4                                      }       
+ 436   3                                      CheckTimerUpDown();
+ 437   3                              }
+ 438   2                              break;  
+ 439   2                      default:
+ 440   2                              ProFlag &= ~D_AdjustFlag;
+ 441   2                              break;          
+ 442   2              }
+ 443   1      }
+ 444          //=============================================================================
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    934    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

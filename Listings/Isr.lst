@@ -1,0 +1,164 @@
+C51 COMPILER V9.00   ISR                                                                   01/25/2026 17:20:40 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE ISR
+OBJECT MODULE PLACED IN .\Objects\Isr.obj
+COMPILER INVOKED BY: D:\Program Files\keil\C51\BIN\C51.EXE src\Isr.c BROWSE INCDIR(.\src) DEBUG OBJECTEXTEND PRINT(.\Lis
+                    -tings\Isr.lst) OBJECT(.\Objects\Isr.obj)
+
+line level    source
+
+   1          //=============================================================================
+   2          //Name          :Isr.c
+   3          //Purpose       :中断处理函数
+   4          //Version       :V1.0
+   5          //Author        :szl
+   6          //Date          :2019.01.19
+   7          //=============================================================================
+   8          #include "AllHeadFile.h"
+   9          //=============================================================================
+  10          
+  11          //=============================================================================
+  12          //定时器0，中断处理函数 //256hz
+  13          void TM0_INT(void)      interrupt       1
+  14          {       
+  15   1              //重要：必须靠前
+  16   1              TH0=D_TM0H;                                                             
+  17   1              TL0=D_TM0L;                                                     //手动重载
+  18   1              
+  19   1              Freq128Hz++;
+  20   1              if(Freq128Hz>7)
+  21   1              {
+  22   2                      Freq128Hz = 0;
+  23   2                      b32HzFlag = 1;
+  24   2              }       
+  25   1                      
+  26   1              
+  27   1              TF0=0;                                                          //TM0中断标志清零       
+  28   1      }
+  29          //=============================================================================
+  30          //定时器1，中断处理函数 //8k    
+  31          void TM1_INT(void)      interrupt       3
+  32          {                                                       
+  33   1              TH1=D_TM1H;
+  34   1              TL1=D_TM1L;
+  35   1              
+  36   1              CheckReceiveData();
+  37   1              
+  38   1              TF1=0;                                                                  //TM1中断标志清零                                                                                       
+  39   1      }
+  40          //=============================================================================
+  41          //定时器2，中断处理函数
+  42          //void TM2_INT(void)    interrupt       5
+  43          //{
+  44          //      TF2 = 0;                                                                //清TM2溢出中断标志
+  45          //}
+  46          //=============================================================================
+  47          //定时器3，中断处理函数
+  48          void TM3_INT(void)      interrupt       7
+  49          {
+  50   1              b2HzFlag = 1;
+  51   1              INTFLG &= ~TF3;                                                 //清TM3中断标志
+  52   1      }
+  53          //=============================================================================
+  54          //IO，中断处理函数
+C51 COMPILER V9.00   ISR                                                                   01/25/2026 17:20:40 PAGE 2   
+
+  55          //void PXIF_INT(void)   interrupt       8
+  56          //{
+  57          //      if(IntCnt<255)
+  58          //        IntCnt++;
+  59          //      INTFLG &= ~PCIF;                                                        //清P1IF中断标志
+  60          //      INTPORT = 0x00;
+  61          //}
+  62          
+  63          ////INT1，中断处理函数
+  64          //void INT1_INT(void)   interrupt       2
+  65          //{
+  66          //      bInt1Int = 1;
+  67          //      IE1 = 0;                                                
+  68          //}
+  69          
+  70          //INT0，中断处理函数
+  71          //void INT0_INT(void)   interrupt       0
+  72          //{
+  73          //      if(IntCnt<255)
+  74          //        IntCnt++;
+  75          //      IE0 = 0;                                                        
+  76          //}
+  77          
+  78          ////IO，中断处理函数
+  79          //void INT2_INT(void)   interrupt       9
+  80          //{
+  81          //      D_Int2Int = 1;
+  82          //      INTFLAG &= ~IE2;                                                        //清P1IF中断标志
+  83          //}
+  84          
+  85          /******************************************************************************************
+  86          ** 函数名称: uart1_irq
+  87          ** 函数描述: uart1中断处理函数
+  88          ** 输入参数: 发送的数据的首地址
+  89          ** 输出参数: 无 
+  90          *******************************************************************************************/
+  91          //void UART_int(void) interrupt 4
+  92          //{
+  93          //    if(RI)
+  94          //    {
+  95          //      UartBuff[0] = UartBuff[1]; 
+  96          //      UartBuff[1] = UartBuff[2]; 
+  97          //      UartBuff[2] = UartBuff[3]; 
+  98          //        UartBuff[3] = SBUF;    //读取串口接收的数据
+  99          //        
+ 100          //        if(UartBuff[0]==0xAA)
+ 101          //        {
+ 102          //          bHaveDate = 1;
+ 103          //          ReveiceData[0] = UartBuff[0];
+ 104          //          ReveiceData[1] = UartBuff[1];
+ 105          //          ReveiceData[2] = UartBuff[2];
+ 106          //          ReveiceData[3] = UartBuff[3];
+ 107          //        }
+ 108          //        RI=0;
+ 109          //    }
+ 110          //    if(TI)  TI=0;   //清除串口1发送中断标志   
+ 111          //}
+ 112          
+ 113          
+ 114          
+ 115          
+ 116          
+C51 COMPILER V9.00   ISR                                                                   01/25/2026 17:20:40 PAGE 3   
+
+ 117          
+ 118          
+ 119          
+ 120          
+ 121          
+ 122          
+ 123          
+ 124          
+ 125          
+ 126          
+ 127          
+ 128          
+ 129          
+ 130          
+ 131          
+ 132          
+ 133          
+ 134          
+ 135          
+ 136          //=============================================================================
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    110    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,53 @@
+IC:TM52F5864
+	<Option>
+	  <Name>PROT</Name>
+	  <Location>0x80</Location>
+	  <StartBit>7</StartBit>
+	  <Length>1</Length>
+	  <Option Value="1">Enable</Option>
+	  <Option Value="0">Disable</Option>
+	</Option>
+
+	<Option>
+	  <Name>XRSTE</Name>
+	  <Location>0x40</Location>
+	  <StartBit>6</StartBit>
+	  <Length>1</Length>
+	  <Option Value="1">Enable</Option>
+	  <Option Value="0">Disable</Option>
+	</Option>
+
+	<Option>
+	  <Name>IAP data reserve range</Name>
+	  <Location>0x0F</Location>
+	  <StartBit>0</StartBit>
+	  <Length>4</Length>
+	  <Option Value="0">No reserve range</Option>
+	  <Option Value="1">16 bytes(3FE0~3FEF)</Option>
+	  <Option Value="2">48 bytes(3FC0~3FEF)</Option>
+	  <Option Value="3">112 bytes(3F80~3FEF)</Option>
+	  <Option Value="4">240 bytes(3F00~3FEF)</Option>
+	  <Option Value="5">496 bytes(3E00~3FEF)</Option>
+	  <Option Value="6">1008 bytes(3C00~3FEF)</Option>
+	  <Option Value="8">2032 bytes(3800~3FEF)</Option>
+	  <Option Value="12">4080 bytes(3000~3FEF)</Option>
+	</Option>
+
+	<Option>
+	  <Name>ICE Mode</Name>
+	  <Location>0x10</Location>
+	  <StartBit>4</StartBit>
+	  <Length>1</Length>
+	  <Option Value="1">4-Wire</Option>
+	  <Option Value="0">5-Wire</Option>
+	</Option>
+
+	<Option>
+	  <Name>On Chip CRC16</Name>
+	  <Location>0x20</Location>
+	  <StartBit>5</StartBit>
+	  <Length>1</Length>
+	  <Option Value="0">Disable</Option>
+	  <Option Value="1">Enable</Option>
+	</Option>
+

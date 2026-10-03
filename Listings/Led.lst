@@ -1,0 +1,1491 @@
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE LED
+OBJECT MODULE PLACED IN .\Objects\Led.obj
+COMPILER INVOKED BY: D:\Program Files\keil\C51\BIN\C51.EXE src\Led.c BROWSE INCDIR(.\src) DEBUG OBJECTEXTEND PRINT(.\Lis
+                    -tings\Led.lst) OBJECT(.\Objects\Led.obj)
+
+line level    source
+
+   1          //=============================================================================
+   2          //Name          :LED.c
+   3          //Purpose       :LED显示函数
+   4          //Version       :V1.0
+   5          //Author        :
+   6          //Date          :2022.05.24
+   7          //=============================================================================
+   8          #include "AllHeadFile.h"
+   9          //=============================================================================
+  10          //LEDRAM处于外部寄存器
+  11          #define c0      0
+  12          #define c1      1
+  13          #define c2      2
+  14          #define c3      3
+  15          #define c4      4
+  16          #define c5      5
+  17          #define c6      6
+  18          #define c7      7
+  19          #define c8      8
+  20          
+  21          #define s0      0
+  22          #define s1      1
+  23          #define s2      2
+  24          #define s3      3
+  25          #define s4      4
+  26          #define s5      5
+  27          #define s6      6
+  28          #define s7      7
+  29          #define s8      8
+  30          #define s9      9
+  31          #define s10     10
+  32          #define s11     11
+  33          #define s12     12
+  34          #define s13     13
+  35          #define s14     14
+  36          #define s15     15
+  37          
+  38          #define IO_PLED P3_3
+  39          #define SEG6    P3_7    //di1
+  40          #define SEG7    P3_5    //di2
+  41          
+  42          #define IO_LED_OE       P0_6
+  43          #define IO_LED_LE1      P0_0
+  44          #define IO_LED_CLK1     P0_1
+  45          #define IO_LED_SDI1     P0_3
+  46          #define IO_LED_LE2      P3_4
+  47          #define IO_LED_CLK2     P0_7
+  48          #define IO_LED_SDI2     P0_4
+  49          
+  50          uchar Led_Data[3];
+  51          xdata uchar Led_Ram[24][3];     
+  52          
+  53          xdata uchar DispLevel1;
+  54          
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 2   
+
+  55          xdata uint Led_Buff[9];
+  56          xdata ulong Led_Buff1[2];
+  57          
+  58          xdata uint Led_GRB6[18];
+  59          xdata uint Led_GRB7[18];
+  60          
+  61          xdata uchar PlayRgb6[18];
+  62          xdata uchar PlayRgb7[18];
+  63          
+  64          static void TurnLedRam(ulong *led_buff,uint *led_rgb);
+  65          
+  66          /*
+  67          **********************************************************************************************************
+             -*******
+  68          */
+  69          unsigned char code Led_Num1[] =
+  70          {
+  71                  c3,s1,          //a1/LD50
+  72                  c3,s0,          //a2/LD49
+  73                  c1,s12,         //b1/LD29
+  74                  c2,s2,          //b2/LD35       
+  75                  c2,s6,          //c1/LD39
+  76                  c2,s7,          //c2/LD40
+  77                  c2,s14,         //d1/LD47
+  78                  c2,s15,         //d2/LD48
+  79                  c2,s12,         //e1/LD45
+  80                  c2,s11,         //e2/LD44
+  81                  c2,s10,         //f1/LD43
+  82                  c2,s9,          //f2/LD42
+  83                  c2,s5,          //g1/LD38
+  84                  c2,s4           //g2/LD37
+  85          };
+  86          unsigned char code Led_Num2[] =
+  87          {
+  88                  c1,s14,         //a1/LD31
+  89                  c1,s15,         //a2/LD32
+  90                  c1,s6,          //b1/LD23
+  91                  c1,s4,          //b2/LD21
+  92                  c0,s3,          //c1/LD4
+  93                  c1,s0,          //c2/LD17
+  94                  c1,s1,          //d1/LD18
+  95                  c1,s2,          //d2/LD19
+  96                  c1,s8,          //e1/LD25
+  97                  c1,s9,          //e2/LD26
+  98                  c1,s10,         //f1/LD27
+  99                  c1,s11,         //f2/LD28
+ 100                  c1,s13,         //g1/LD30
+ 101                  c1,s3           //g2/LD20       
+ 102          };
+ 103          unsigned char code Led_Num3[] =
+ 104          {
+ 105                  c8,s4,          //a1/LD133
+ 106                  c8,s5,          //a2/LD134
+ 107                  c0,s9,          //b1/LD10
+ 108                  c0,s10,         //b2/LD11
+ 109                  c8,s8,          //c1/LD137
+ 110                  c8,s9,          //c2/LD138
+ 111                  c8,s10,         //d1/LD139
+ 112                  c8,s11,         //d2/LD140
+ 113                  c0,s0,          //e1/LD1
+ 114                  c0,s1,          //e2/LD2
+ 115                  c0,s11,         //f1/LD12
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 3   
+
+ 116                  c0,s12,         //f2/LD13
+ 117                  c0,s15,         //g1/LD16
+ 118                  c0,s14          //g2/LD15
+ 119          };
+ 120          unsigned char code Led_Num4[] =
+ 121          {
+ 122                  c8,s13,         //a1/LD142
+ 123                  c8,s14,         //a2/LD143
+ 124                  c8,s6,          //b1/LD135
+ 125                  c8,s15,         //b2/LD144
+ 126                  c8,s7,          //c1/LD136
+ 127                  c7,s12,         //c2/LD125
+ 128                  c7,s0,          //d1/LD113
+ 129                  c7,s1,          //d2/LD114
+ 130                  c8,s0,          //e1/LD129
+ 131                  c8,s12,         //e2/LD141
+ 132                  c0,s13,         //f1/LD14
+ 133                  c0,s8,          //f2/LD9
+ 134                  c0,s7,          //g1/LD8
+ 135                  c0,s6           //g2/LD7
+ 136          };
+ 137          
+ 138          unsigned char code Led_NumT1[] =
+ 139          {
+ 140                  c7,s10,         //b/LD123
+ 141                  c7,s8           //c/LD121
+ 142          };
+ 143          unsigned char code Led_NumT2[] =
+ 144          {
+ 145                  c7,s13,         //a/LD126
+ 146                  c7,s5,          //b/LD118
+ 147                  c7,s4,          //c/LD117
+ 148                  c7,s7,          //d/LD120
+ 149                  c7,s14,         //e/LD127
+ 150                  c7,s9,          //f/LD122
+ 151                  c7,s6           //g/LD119
+ 152          };
+ 153          unsigned char code Led_NumT3[] =
+ 154          {
+ 155                  c6,s15,         //a/LD112
+ 156                  c6,s4,          //b/LD101
+ 157                  c6,s5,          //c/LD102
+ 158                  c6,s13,         //d/LD110
+ 159                  c6,s10,         //e/LD107
+ 160                  c6,s11,         //f/LD108
+ 161                  c6,s14          //g/LD111
+ 162          };
+ 163          unsigned char code Led_NumH1[] =
+ 164          {
+ 165                  c4,s9,          //a/LD74
+ 166                  c5,s6,          //b/LD87
+ 167                  c5,s5,          //c/LD86
+ 168                  c5,s7,          //d/LD88
+ 169                  c5,s10,         //e/LD91
+ 170                  c5,s12,         //f/LD93
+ 171                  c5,s11          //g/LD92
+ 172          };
+ 173          unsigned char code Led_NumH2[] =
+ 174          {
+ 175                  c4,s6,          //a/LD71
+ 176                  c4,s4,          //b/LD69
+ 177                  c4,s5,          //c/LD70
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 4   
+
+ 178                  c4,s12,         //d/LD77
+ 179                  c4,s11,         //e/LD76
+ 180                  c4,s10,         //f/LD75
+ 181                  c4,s13          //g/LD78
+ 182          };
+ 183          
+ 184          unsigned char code Led_NumD1[] =
+ 185          {
+ 186                  c7,s11,         //b/LD124
+ 187                  c7,s3           //c/LD116
+ 188          };
+ 189          unsigned char code Led_NumD2[] =
+ 190          {
+ 191                  c7,s2,          //a/LD115
+ 192                  c6,s12,         //b/LD109
+ 193                  c6,s1,          //c/LD98
+ 194                  c6,s2,          //d/LD99
+ 195                  c6,s9,          //e/LD106
+ 196                  c7,s15,         //f/LD128
+ 197                  c6,s8           //g/LD105
+ 198          };
+ 199          unsigned char code Led_NumD3[] =
+ 200          {
+ 201                  c5,s14,         //a/LD95
+ 202                  c5,s3,          //b/LD84
+ 203                  c5,s2,          //c/LD83
+ 204                  c4,s8,          //d/LD73
+ 205                  c5,s15,         //e/LD96
+ 206                  c6,s6,          //f/LD103
+ 207                  c5,s8           //g/LD89
+ 208          };
+ 209          unsigned char code Led_NumD4[] =
+ 210          {
+ 211                  c5,s0,          //a/LD81
+ 212                  c4,s7,          //b/LD72
+ 213                  c4,s2,          //c/LD67
+ 214                  c4,s1,          //d/LD66
+ 215                  c4,s14,         //e/LD79
+ 216                  c5,s1,          //f/LD82
+ 217                  c4,s15          //g/LD80
+ 218          };
+ 219          
+ 220          unsigned char code Led_WeekR[] =
+ 221          {
+ 222                  c3,s3,          //a/LD52
+ 223                  c3,s5,          //b/LD54
+ 224                  c3,s7,          //c/LD56
+ 225                  c3,s8,          //d/LD57
+ 226                  c3,s11,         //e/LD60
+ 227                  c3,s13,         //f/LD62
+ 228                  c3,s15          //g/LD64        
+ 229          };
+ 230          
+ 231          unsigned char code Led_WeekW[] =
+ 232          {
+ 233                  c3,s2,          //a/LD51
+ 234                  c3,s4,          //b/LD53
+ 235                  c3,s6,          //c/LD55
+ 236                  c3,s9,          //d/LD58
+ 237                  c3,s10,         //e/LD59
+ 238                  c3,s12,         //f/LD61
+ 239                  c3,s14          //g/LD63        
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 5   
+
+ 240          };
+ 241          
+ 242          unsigned char code Led_Col[] =
+ 243          {
+ 244                  c1,s5,          //col1/LD22
+ 245                  c0,s2           //col2/LD3
+ 246          };
+ 247          
+ 248          unsigned char code Led_AmPm[] =
+ 249          {
+ 250                  c2,s3,          //am/LD36
+ 251                  c2,s8           //pm/LD41       
+ 252          };
+ 253          
+ 254          unsigned char code Led_Alarm[] =
+ 255          {
+ 256                  c8,s3,          //al1/LD132
+ 257                  c8,s2           //al2/LD131
+ 258          };
+ 259          
+ 260          unsigned char code Led_Dst[] =
+ 261          {
+ 262                  c8,s1           //dst/LD130
+ 263          };
+ 264          
+ 265          unsigned char code Led_TH[] =
+ 266          {
+ 267                  c6,s3,          //C/LD100
+ 268                  c5,s13,         //F/LD94
+ 269                  c4,s3           //%/LD68
+ 270          };
+ 271          
+ 272          unsigned char code Led_Date[] =
+ 273          {
+ 274                  c6,s7,          //-/LD104
+ 275                  c6,s0,          //m/LD97
+ 276                  c4,s0           //d/LD65
+ 277          };
+ 278          
+ 279          /*
+ 280          **********************************************************************************************************
+             -*******
+ 281          */
+ 282          //ggffeeddccbbaa
+ 283          unsigned int code FontTab1[] = 
+ 284          {       
+ 285                  0x0fff,         //0
+ 286                  0x003c,         //1
+ 287                  0x33cf,         //2
+ 288                  0x30ff,         //3
+ 289                  0x3c3c,         //4
+ 290                  0x3cf3,         //5
+ 291                  0x3ff3,         //6
+ 292                  0x003f,         //7
+ 293                  0x3fff,         //8
+ 294                  0x3cff,         //9
+ 295                  0x0000,         //
+ 296                  0x3000,         //- B   
+ 297                  0x3f3c,         //H C   
+ 298                  0x3f3f,         //A D   
+ 299                  0x0fc0,         //L E   
+ 300                  0x3f03,         //F F   
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 6   
+
+ 301                  0x0f3f,         //N 10
+ 302                  0x33fc,         //d 11
+ 303                  0x0ffc,         //U 12
+ 304                  0x0fc3          //C 13
+ 305          };
+ 306          
+ 307          unsigned char code FontTab[] = 
+ 308          {       
+ 309                  0x3F,           //0
+ 310                  0x06,           //1
+ 311                  0x5B,           //2
+ 312                  0x4F,           //3
+ 313                  0x66,           //4
+ 314                  0x6D,           //5
+ 315                  0x7D,           //6
+ 316                  0x07,           //7
+ 317                  0x7F,           //8
+ 318                  0x6F,           //9
+ 319                  0x00,           //
+ 320                  0x40,           //- B   
+ 321                  0x76,           //H C
+ 322                  0x38            //L D   
+ 323          };
+ 324          
+ 325          unsigned long code Map_Bit[] = 
+ 326          {       
+ 327                  0x0001,         //0
+ 328                  0x0002,         //1
+ 329                  0x0004,         //2
+ 330                  0x0008,         //3
+ 331                  0x0010,         //4
+ 332                  0x0020,         //5
+ 333                  0x0040,         //6
+ 334                  0x0080,         //7
+ 335                  0x0100,         //8
+ 336                  0x0200,         //9
+ 337                  0x0400,         //10
+ 338                  0x0800,         //11
+ 339                  0x1000,         //12
+ 340                  0x2000,         //13
+ 341                  0x4000,         //14
+ 342                  0x8000,         //15
+ 343                  0x10000,                //16
+ 344                  0x20000,                //17
+ 345                  0x40000,                //18
+ 346                  0x80000,                //19
+ 347                  0x100000,               //20
+ 348                  0x200000,               //21
+ 349                  0x400000,               //22
+ 350                  0x800000                //23
+ 351          };
+ 352          
+ 353          //unsigned int code Led_Bit[] = 
+ 354          //{     
+ 355          //      0x0001,         //0
+ 356          //      0x0002,         //1
+ 357          //      0x0004,         //2
+ 358          //      0x0008,         //3
+ 359          //      0x0010,         //4
+ 360          //      0x0020,         //5
+ 361          //      0x0040,         //6
+ 362          //      0x0080,         //7
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 7   
+
+ 363          //      0x0100,         //8
+ 364          //      0x0200,         //9
+ 365          //      0x0400,         //10
+ 366          //      0x0800,         //11
+ 367          //      0x1000,         //12
+ 368          //      0x2000,         //13
+ 369          //      0x4000,         //14
+ 370          //      0x8000          //15
+ 371          //};
+ 372          
+ 373          
+ 374          /*
+ 375          **********************************************************************************************************
+             -*******
+ 376          */
+ 377          unsigned int code Rgb_Tab[] =
+ 378          {
+ 379                  //H/S/V
+ 380                  0,              //0 红
+ 381                  12,             //1 橙
+ 382                  60,             //2 黄
+ 383                  120,            //3 绿
+ 384                  180,            //4 青
+ 385                  240,            //5 蓝
+ 386                  300,            //6 粉
+ 387                  345,            //7 祡
+ 388                  360             //8 白
+ 389          };
+ 390          
+ 391          unsigned int code Rgb_Tab1[] =
+ 392          {
+ 393                  //H/S/V
+ 394                  0,              //0 红
+ 395                  40,             //1 橙
+ 396                  80,             //2 黄
+ 397                  120,            //3 绿
+ 398                  160,            //4 青
+ 399                  200,            //5 蓝
+ 400                  240,            //6 蓝
+ 401                  280,            //7 粉
+ 402                  320,            //8 祡
+ 403                  360             //9 白
+ 404          };
+ 405          
+ 406          //=============================================================================
+ 407          //功能：main loop
+ 408          //输入参数：
+ 409          //输出参数：
+ 410          //=============================================================================
+ 411          /*LED刷新函数*/
+ 412          void Led_Reflush(void)
+ 413          {
+ 414   1              uchar i,j;
+ 415   1              uint tmpBuff;
+ 416   1              
+ 417   1              if(SysFlag&D_DispUpdata)
+ 418   1              {
+ 419   2                      SysFlag &= ~D_DispUpdata;
+ 420   2                      IO_LED_LE1 = 0;
+ 421   2                      for(j=0;j<4;j++)
+ 422   2                      {
+ 423   3                              tmpBuff = Led_Buff[3-j];
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 8   
+
+ 424   3                              for(i=0;i<16;i++)
+ 425   3                              {
+ 426   4                                      if(tmpBuff&0x8000)
+ 427   4                                              IO_LED_SDI1 = 1;
+ 428   4                                      else
+ 429   4                                              IO_LED_SDI1 = 0;
+ 430   4                                      IO_LED_CLK1 = 1;        
+ 431   4                                      tmpBuff = tmpBuff<<1;
+ 432   4                                      IO_LED_CLK1 = 0; 
+ 433   4                              }       
+ 434   3                      }               
+ 435   2                      IO_LED_LE1 = 1;
+ 436   2                      IO_LED_LE1 = 0;
+ 437   2                      
+ 438   2                      IO_LED_LE2 = 0;
+ 439   2                      for(j=0;j<5;j++)
+ 440   2                      {
+ 441   3                              tmpBuff = Led_Buff[8-j];
+ 442   3                              for(i=0;i<16;i++)
+ 443   3                              {
+ 444   4                                      if(tmpBuff&0x8000)
+ 445   4                                              IO_LED_SDI2 = 1;
+ 446   4                                      else
+ 447   4                                              IO_LED_SDI2 = 0;
+ 448   4                                      IO_LED_CLK2 = 1;        
+ 449   4                                      tmpBuff = tmpBuff<<1;
+ 450   4                                      IO_LED_CLK2 = 0; 
+ 451   4                              }       
+ 452   3                      }               
+ 453   2                      IO_LED_LE2 = 1;
+ 454   2                      IO_LED_LE2 = 0;
+ 455   2                      
+ 456   2                      PWM_On();
+ 457   2              }       
+ 458   1      }
+ 459          
+ 460          //=============================================================================
+ 461          //功能：main loop
+ 462          //输入参数：
+ 463          //输出参数：
+ 464          //=============================================================================
+ 465          /*LED刷新函数*/
+ 466          void Led_Reflush1(void)
+ 467          {
+ 468   1              uchar i,j,k;
+ 469   1              if(SysFlag&D_DispUpdata1)
+ 470   1              {
+ 471   2                      SysFlag &= ~D_DispUpdata1;
+ 472   2                      TurnLedRam(&Led_Buff1[0],Led_GRB6);
+ 473   2                              for(i=0;i<18;i++)       
+ 474   2                              {
+ 475   3                                      Led_Data[0] = Led_Ram[i][1];    //G
+ 476   3                                      Led_Data[1] = Led_Ram[i][0];    //R
+ 477   3                                      Led_Data[2] = Led_Ram[i][2];    //B
+ 478   3                                      for(j=0;j<3;j++)
+ 479   3                                      {
+ 480   4                                              for(k=0;k<8;k++)
+ 481   4                                              {
+ 482   5                                                      EA=0;   
+ 483   5                                                      if(Led_Data[j]&0x80)
+ 484   5                                                      {
+ 485   6                                                              SEG6 = 1;
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 9   
+
+ 486   6                                                              _nop_();
+ 487   6                                                              _nop_();
+ 488   6                                                              _nop_();
+ 489   6                                                              _nop_();
+ 490   6                                                              _nop_();
+ 491   6                                                              SEG6 = 0;
+ 492   6                                                      }       
+ 493   5                                                      else
+ 494   5                                                      {
+ 495   6                                                              SEG6 = 1;
+ 496   6                                                              _nop_();
+ 497   6                                                              _nop_();
+ 498   6                                                              SEG6 = 0;
+ 499   6                                                      }       
+ 500   5                                                      EA=1;           
+ 501   5                                                      Led_Data[j] = Led_Data[j]<<1;
+ 502   5                                              }
+ 503   4                                      }
+ 504   3                              }
+ 505   2                              
+ 506   2                      
+ 507   2                      TurnLedRam(&Led_Buff1[1],Led_GRB7);
+ 508   2                              for(i=0;i<18;i++)       
+ 509   2                              {
+ 510   3                                      Led_Data[0] = Led_Ram[i][1];    //G
+ 511   3                                      Led_Data[1] = Led_Ram[i][0];    //R
+ 512   3                                      Led_Data[2] = Led_Ram[i][2];    //B
+ 513   3                                      for(j=0;j<3;j++)
+ 514   3                                      {
+ 515   4                                              for(k=0;k<8;k++)
+ 516   4                                              {
+ 517   5                                                      EA=0;   
+ 518   5                                                      if(Led_Data[j]&0x80)
+ 519   5                                                      {
+ 520   6                                                              SEG7 = 1;
+ 521   6                                                              _nop_();
+ 522   6                                                              _nop_();
+ 523   6                                                              _nop_();
+ 524   6                                                              _nop_();
+ 525   6                                                              _nop_();
+ 526   6                                                              SEG7 = 0;
+ 527   6                                                      }       
+ 528   5                                                      else
+ 529   5                                                      {
+ 530   6                                                              SEG7 = 1;
+ 531   6                                                              _nop_();
+ 532   6                                                              _nop_();
+ 533   6                                                              SEG7 = 0;
+ 534   6                                                      }       
+ 535   5                                                      EA=1;   
+ 536   5                                                      Led_Data[j] = Led_Data[j]<<1;
+ 537   5                                              }
+ 538   4                                      }
+ 539   3                              }
+ 540   2              }       
+ 541   1      }
+ 542          
+ 543          //=============================================================================
+ 544          //功能：
+ 545          //输入参数：
+ 546          //输出参数：
+ 547          //=============================================================================
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 10  
+
+ 548          void Led_TurnOn( void )
+ 549          {
+ 550   1              IO_PLED = 0;
+ 551   1      }
+ 552          
+ 553          void Led_TurnOff( void )
+ 554          {
+ 555   1              IO_PLED = 1;
+ 556   1              IO_LED_SDI1 = 0;
+ 557   1              IO_LED_SDI2 = 0;
+ 558   1              PWM_Off();
+ 559   1              SysFlag &= ~(D_DispUpdata|D_DispUpdata1);
+ 560   1      }
+ 561          
+ 562          /*
+ 563          //;;--------------------------------------------------------------------
+ 564          */
+ 565          void DispAllLed(uchar OnOff)
+ 566          {
+ 567   1              uchar i;
+ 568   1              uint disp_data;
+ 569   1              SysFlag |= D_DispUpdata;
+ 570   1              if(OnOff)
+ 571   1                      disp_data = 0xffff;
+ 572   1              else
+ 573   1                      disp_data = 0x0000;     
+ 574   1              for(i=0;i<9;i++)
+ 575   1              {
+ 576   2                      Led_Buff[i] = disp_data;
+ 577   2              }
+ 578   1      }
+ 579          
+ 580          void DispAllLight(uchar OnOff)
+ 581          {
+ 582   1              ulong disp_data;
+ 583   1              SysFlag |= D_DispUpdata1;
+ 584   1              if(OnOff)
+ 585   1                      disp_data = 0x00ffffff;
+ 586   1              else
+ 587   1                      disp_data = 0x00000000; 
+ 588   1                      
+ 589   1              Led_Buff1[0] = disp_data;
+ 590   1              Led_Buff1[1] = disp_data;
+ 591   1      }
+ 592          
+ 593          
+ 594          // p = v * (1 - s) = 0
+ 595          // q = v * (1 - s * fractional)
+ 596          // t = v * (1 - s * (1 - fractional))
+ 597          static void TurnLedRam(ulong *led_buff,uint *led_rgb)
+ 598          {
+ 599   1              uchar i,j,k;
+ 600   1              uchar redata;
+ 601   1              
+ 602   1              for(i=0;i<18;i++)
+ 603   1              {
+ 604   2                      if((((*led_buff)&Map_Bit[i])==0)||(DispLevel1==0))
+ 605   2                      {
+ 606   3                              Led_Ram[i][0] = 0;
+ 607   3                              Led_Ram[i][1] = 0;
+ 608   3                              Led_Ram[i][2] = 0;
+ 609   3                      }
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 11  
+
+ 610   2                      else
+ 611   2                      {       
+ 612   3                              j = (uchar)(*led_rgb/60);
+ 613   3                              k = (uchar)(*led_rgb%60);
+ 614   3                              redata = DispLevel1;    //v
+ 615   3                              switch(j)
+ 616   3                              {
+ 617   4                                      case 0:         // r, g, b = v, t, p
+ 618   4                                              Led_Ram[i][0] = redata; 
+ 619   4                                              Led_Ram[i][1] = (uchar)((uint)redata*(uint)k/60);
+ 620   4                                              Led_Ram[i][2] = 0;
+ 621   4                                              if((Led_Ram[i][1]==0)&&(k>0))
+ 622   4                                                      Led_Ram[i][1] = 1;
+ 623   4                                              break;  
+ 624   4                                      case 1:         // r, g, b = q, v, p
+ 625   4                                              Led_Ram[i][0] = (uchar)((uint)redata*(uint)(60-k)/60);  
+ 626   4                                              Led_Ram[i][1] = redata;
+ 627   4                                              Led_Ram[i][2] = 0;
+ 628   4                                              if((Led_Ram[i][0]==0)&&(k<60))
+ 629   4                                                      Led_Ram[i][0] = 1;
+ 630   4                                              break;          
+ 631   4                                      case 2:         // r, g, b = p, v, t
+ 632   4                                              Led_Ram[i][0] = 0;      
+ 633   4                                              Led_Ram[i][1] = redata;
+ 634   4                                              Led_Ram[i][2] = (uchar)((uint)redata*(uint)k/60);
+ 635   4                                              if((Led_Ram[i][2]==0)&&(k>0))
+ 636   4                                                      Led_Ram[i][2] = 1;
+ 637   4                                              break;  
+ 638   4                                      case 3:         // r, g, b = p, q, v
+ 639   4                                              Led_Ram[i][0] = 0;      
+ 640   4                                              Led_Ram[i][1] = (uchar)((uint)redata*(uint)(60-k)/60);  
+ 641   4                                              Led_Ram[i][2] = redata;
+ 642   4                                              if((Led_Ram[i][1]==0)&&(k<60))
+ 643   4                                                      Led_Ram[i][1] = 1;
+ 644   4                                              break;  
+ 645   4                                      case 4:         // r, g, b = t, p, v
+ 646   4                                              Led_Ram[i][0] = (uchar)((uint)redata*(uint)k/60);       
+ 647   4                                              Led_Ram[i][1] = 0;
+ 648   4                                              Led_Ram[i][2] = redata;
+ 649   4                                              if((Led_Ram[i][0]==0)&&(k>0))
+ 650   4                                                      Led_Ram[i][0] = 1;
+ 651   4                                              break;          
+ 652   4                                      case 5:         // r, g, b = v, p, q
+ 653   4                                              Led_Ram[i][0] = redata; 
+ 654   4                                              Led_Ram[i][1] = 0;
+ 655   4                                              Led_Ram[i][2] = (uchar)((uint)redata*(uint)(60-k)/60);  
+ 656   4                                              if((Led_Ram[i][2]==0)&&(k<60))
+ 657   4                                                      Led_Ram[i][2] = 1;
+ 658   4                                              break;  
+ 659   4                                      case 6:         //255,255,255
+ 660   4                                              Led_Ram[i][0] = redata; 
+ 661   4                                              Led_Ram[i][1] = redata; 
+ 662   4                                              Led_Ram[i][2] = redata; 
+ 663   4                                              break;                                  
+ 664   4                                      default:
+ 665   4                                              break;  
+ 666   4                              }
+ 667   3                      }       
+ 668   2                      led_rgb++;
+ 669   2              }
+ 670   1      }
+ 671          
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 12  
+
+ 672          
+ 673          /*
+ 674          //;;--------------------------------------------------------------------
+ 675          */
+ 676          void DispSybmol( uchar *LedNum, uchar OnOff)
+ 677          {
+ 678   1              uchar DispRam;
+ 679   1              uchar DispBit;
+ 680   1              
+ 681   1              SysFlag |= D_DispUpdata;
+ 682   1              
+ 683   1              DispRam=*LedNum++;
+ 684   1              DispBit=*LedNum++;
+ 685   1              
+ 686   1              if(OnOff)
+ 687   1                      Led_Buff[DispRam] |= Map_Bit[DispBit]&0xffff;   //disp
+ 688   1              else
+ 689   1                      Led_Buff[DispRam] &= (~Map_Bit[DispBit])&0xffff;        //clear
+ 690   1      }                       
+ 691          
+ 692          /*
+ 693          //;;--------------------------------------------------------------------
+ 694          */
+ 695          void DispSybmols( uchar *LedNum, uchar Long, uchar LcdTmpSegs)
+ 696          {
+ 697   1              uchar DispRam;
+ 698   1              uchar DispBit;
+ 699   1              uchar i;
+ 700   1              
+ 701   1              SysFlag |= D_DispUpdata;
+ 702   1              
+ 703   1              for(i=0;i<Long;i++)
+ 704   1              {
+ 705   2                      DispRam=*LedNum++;
+ 706   2                      DispBit=*LedNum++;
+ 707   2                      if(LcdTmpSegs&0x01)
+ 708   2                              Led_Buff[DispRam] |= Map_Bit[DispBit]&0xffff;   //disp
+ 709   2                      else    
+ 710   2                              Led_Buff[DispRam] &= (~Map_Bit[DispBit])&0xffff;        //clear
+ 711   2                      LcdTmpSegs >>= 1;
+ 712   2               }
+ 713   1      }
+ 714          /*
+ 715          //;;--------------------------------------------------------------------
+ 716          */
+ 717          void DispDigit1(uchar *LedNum, uchar Font)
+ 718          {
+ 719   1              uchar DispRam;
+ 720   1              uchar DispBit;
+ 721   1              uint LcdTmpSegs;
+ 722   1              uchar i;
+ 723   1              
+ 724   1              SysFlag |= D_DispUpdata;
+ 725   1              
+ 726   1              LcdTmpSegs=FontTab1[Font];
+ 727   1              for(i=0;i<14;i++)
+ 728   1              {
+ 729   2                      DispRam=*LedNum++;
+ 730   2                      DispBit=*LedNum++;
+ 731   2                      if(LcdTmpSegs&0x01)
+ 732   2                              Led_Buff[DispRam] |= Map_Bit[DispBit]&0xffff;   //disp
+ 733   2                      else    
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 13  
+
+ 734   2                              Led_Buff[DispRam] &= (~Map_Bit[DispBit])&0xffff;        //clear
+ 735   2                      LcdTmpSegs >>= 1;
+ 736   2               }
+ 737   1      }
+ 738          /*
+ 739          //;;--------------------------------------------------------------------
+ 740          */
+ 741          void DispDigit(uchar *LedNum, uchar Font)
+ 742          {
+ 743   1              uchar DispRam;
+ 744   1              uchar DispBit;
+ 745   1              uchar LcdTmpSegs;
+ 746   1              uchar i;
+ 747   1              
+ 748   1              SysFlag |= D_DispUpdata;
+ 749   1              
+ 750   1              LcdTmpSegs=FontTab[Font];
+ 751   1              for(i=0;i<7;i++)
+ 752   1              {
+ 753   2                      DispRam=*LedNum++;
+ 754   2                      DispBit=*LedNum++;
+ 755   2                      if(LcdTmpSegs&0x01)
+ 756   2                              Led_Buff[DispRam] |= Map_Bit[DispBit]&0xffff;   //disp
+ 757   2                      else    
+ 758   2                              Led_Buff[DispRam] &= (~Map_Bit[DispBit])&0xffff;        //clear
+ 759   2                      LcdTmpSegs >>= 1;
+ 760   2              }
+ 761   1      }
+ 762          //=============================================================================
+ 763          //=============================================================================
+ 764          //=============================================================================
+ 765          //=============================================================================
+ 766          static uchar GetPlayRgbValue(uint s_data,uint o_data)
+ 767          {
+ 768   1              uchar tmp_ual;
+ 769   1              if(s_data>=o_data)
+ 770   1                      tmp_ual = (uchar)(s_data-o_data);       
+ 771   1              else
+ 772   1                      tmp_ual = (uchar)(360+s_data-o_data);   
+ 773   1              return(tmp_ual);        
+ 774   1      }
+ 775          //=============================================================================
+ 776          void SetAllDispRgb1(uchar rgb_num)
+ 777          {
+ 778   1              uchar i;
+ 779   1              SysFlag |= D_DispUpdata1;
+ 780   1              for(i=0;i<18;i++)
+ 781   1              {
+ 782   2                      Led_GRB6[i] = Rgb_Tab[rgb_num];
+ 783   2                      Led_GRB7[i] = Rgb_Tab[rgb_num];
+ 784   2              }
+ 785   1      }
+ 786          
+ 787          //void SetAllDispRgb1_1(uchar rgb_num)
+ 788          //{
+ 789          //      uchar i;
+ 790          //      SysFlag |= D_DispUpdata1;
+ 791          //      for(i=0;i<18;i++)
+ 792          //      {
+ 793          //              Led_GRB6[i] = Rgb_Tab1[rgb_num];
+ 794          //              Led_GRB7[i] = Rgb_Tab1[rgb_num];
+ 795          //      }
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 14  
+
+ 796          //}
+ 797          
+ 798          //=============================================================================
+ 799          void SetAllDispRgb1_S(void)
+ 800          {
+ 801   1              uchar i;
+ 802   1              uchar play_rgb;
+ 803   1              play_rgb = 40;
+ 804   1              for(i=0;i<18;i++)
+ 805   1              {
+ 806   2                      PlayRgb6[i] = play_rgb;
+ 807   2                      PlayRgb7[i] = play_rgb;
+ 808   2              }
+ 809   1      }
+ 810          
+ 811          //=============================================================================
+ 812          void SetAllDispRgb1_ud(void)
+ 813          {
+ 814   1              uchar i;
+ 815   1              SysFlag |= D_DispUpdata1;
+ 816   1              //2
+ 817   1              for(i=0;i<14;i++)
+ 818   1              {
+ 819   2                      Led_GRB6[i] = Rgb_Tab1[2];
+ 820   2              }
+ 821   1              //2
+ 822   1              Led_GRB6[14] = Rgb_Tab1[2];
+ 823   1              Led_GRB7[17] = Rgb_Tab1[2];
+ 824   1              
+ 825   1              //1
+ 826   1              Led_GRB6[15] = Rgb_Tab1[1];
+ 827   1              Led_GRB7[16] = Rgb_Tab1[1];
+ 828   1              
+ 829   1              //1
+ 830   1              Led_GRB6[16] = Rgb_Tab1[1];
+ 831   1              Led_GRB7[15] = Rgb_Tab1[1];
+ 832   1              
+ 833   1              //0
+ 834   1              Led_GRB6[17] = Rgb_Tab1[0];
+ 835   1              Led_GRB7[14] = Rgb_Tab1[0];
+ 836   1              
+ 837   1              //0
+ 838   1              for(i=0;i<14;i++)
+ 839   1              {
+ 840   2                      Led_GRB7[i] = Rgb_Tab1[0];
+ 841   2              }
+ 842   1      }       
+ 843          
+ 844          //=============================================================================
+ 845          void SetAllDispRgb1_ud_S(void)
+ 846          {
+ 847   1              uchar i;
+ 848   1              uchar play_rgb;
+ 849   1              //0
+ 850   1              play_rgb = GetPlayRgbValue(Led_GRB7[14],Led_GRB7[13]);
+ 851   1              for(i=0;i<14;i++)
+ 852   1              {
+ 853   2                      PlayRgb7[i] = play_rgb;
+ 854   2              }
+ 855   1              //0
+ 856   1              play_rgb = GetPlayRgbValue(Led_GRB7[15],Led_GRB7[14]);
+ 857   1              PlayRgb6[17] = play_rgb;
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 15  
+
+ 858   1              PlayRgb7[14] = play_rgb;
+ 859   1              //1
+ 860   1              play_rgb = GetPlayRgbValue(Led_GRB7[16],Led_GRB7[15]);
+ 861   1              PlayRgb6[16] = play_rgb;
+ 862   1              PlayRgb7[15] = play_rgb;
+ 863   1              //1
+ 864   1              play_rgb = GetPlayRgbValue(Led_GRB7[17],Led_GRB7[16]);
+ 865   1              PlayRgb6[15] = play_rgb;
+ 866   1              PlayRgb7[16] = play_rgb;
+ 867   1              //2
+ 868   1              play_rgb = GetPlayRgbValue(Led_GRB6[0],Led_GRB7[17]);
+ 869   1              PlayRgb6[14] = play_rgb;
+ 870   1              PlayRgb7[17] = play_rgb;
+ 871   1              //2
+ 872   1              if(PlayLight&0x01)
+ 873   1              {
+ 874   2                      for(i=0;i<14;i++)
+ 875   2                      {
+ 876   3                              PlayRgb6[i] = 0;
+ 877   3                      }
+ 878   2              }       
+ 879   1              else
+ 880   1              {
+ 881   2                      play_rgb = 40;
+ 882   2                      for(i=0;i<14;i++)
+ 883   2                      {
+ 884   3                              PlayRgb6[i] = play_rgb;
+ 885   3                      }
+ 886   2              }       
+ 887   1      }       
+ 888          
+ 889          //=============================================================================
+ 890          void SetAllDispRgb1_gl(void)
+ 891          {
+ 892   1              SysFlag |= D_DispUpdata1;
+ 893   1              
+ 894   1              //5
+ 895   1              Led_GRB7[17] = Rgb_Tab1[5];
+ 896   1              Led_GRB7[16] = Rgb_Tab1[5];
+ 897   1              Led_GRB7[15] = Rgb_Tab1[5];
+ 898   1              Led_GRB7[14] = Rgb_Tab1[5];
+ 899   1              
+ 900   1              //4
+ 901   1              Led_GRB6[0] = Rgb_Tab1[4];
+ 902   1              Led_GRB7[13] = Rgb_Tab1[4];
+ 903   1              //4
+ 904   1              Led_GRB6[1] = Rgb_Tab1[4];
+ 905   1              Led_GRB7[12] = Rgb_Tab1[4];
+ 906   1              //4
+ 907   1              Led_GRB6[2] = Rgb_Tab1[4];
+ 908   1              Led_GRB7[11] = Rgb_Tab1[4];
+ 909   1              
+ 910   1              //3
+ 911   1              Led_GRB6[3] = Rgb_Tab1[3];
+ 912   1              Led_GRB7[10] = Rgb_Tab1[3];
+ 913   1              //3
+ 914   1              Led_GRB6[4] = Rgb_Tab1[3];
+ 915   1              Led_GRB7[9] = Rgb_Tab1[3];
+ 916   1              //3
+ 917   1              Led_GRB6[5] = Rgb_Tab1[3];
+ 918   1              Led_GRB7[8] = Rgb_Tab1[3];
+ 919   1              
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 16  
+
+ 920   1              //2
+ 921   1              Led_GRB6[6] = Rgb_Tab1[2];
+ 922   1              Led_GRB7[7] = Rgb_Tab1[2];
+ 923   1              //2
+ 924   1              Led_GRB6[7] = Rgb_Tab1[2];
+ 925   1              Led_GRB7[6] = Rgb_Tab1[2];
+ 926   1              //2
+ 927   1              Led_GRB6[8] = Rgb_Tab1[2];
+ 928   1              Led_GRB7[5] = Rgb_Tab1[2];
+ 929   1              
+ 930   1              //1
+ 931   1              Led_GRB6[9] = Rgb_Tab1[1];
+ 932   1              Led_GRB7[4] = Rgb_Tab1[1];
+ 933   1              //1
+ 934   1              Led_GRB6[10] = Rgb_Tab1[1];
+ 935   1              Led_GRB7[3] = Rgb_Tab1[1];
+ 936   1              //1
+ 937   1              Led_GRB6[11] = Rgb_Tab1[1];
+ 938   1              Led_GRB7[2] = Rgb_Tab1[1];
+ 939   1              
+ 940   1              //0
+ 941   1              Led_GRB6[12] = Rgb_Tab1[0];
+ 942   1              Led_GRB7[1] = Rgb_Tab1[0];      
+ 943   1              //0
+ 944   1              Led_GRB6[13] = Rgb_Tab1[0];
+ 945   1              Led_GRB7[0] = Rgb_Tab1[0];
+ 946   1              //0
+ 947   1              Led_GRB6[14] = Rgb_Tab1[0];
+ 948   1              Led_GRB6[15] = Rgb_Tab1[0];
+ 949   1              Led_GRB6[16] = Rgb_Tab1[0];
+ 950   1              Led_GRB6[17] = Rgb_Tab1[0];
+ 951   1      }
+ 952          
+ 953          //=============================================================================
+ 954          void SetAllDispRgb1_gl_S(void)
+ 955          {
+ 956   1              uchar play_rgb;
+ 957   1              //0
+ 958   1              play_rgb = GetPlayRgbValue(Led_GRB6[13],Led_GRB6[14]);
+ 959   1              PlayRgb6[14] = play_rgb;
+ 960   1              PlayRgb6[15] = play_rgb;
+ 961   1              PlayRgb6[16] = play_rgb;
+ 962   1              PlayRgb6[17] = play_rgb;
+ 963   1              //0
+ 964   1              play_rgb = GetPlayRgbValue(Led_GRB6[12],Led_GRB6[13]);
+ 965   1              PlayRgb6[13] = play_rgb;
+ 966   1              PlayRgb7[0] = play_rgb;
+ 967   1              //0
+ 968   1              play_rgb = GetPlayRgbValue(Led_GRB6[11],Led_GRB6[12]);
+ 969   1              PlayRgb6[12] = play_rgb;
+ 970   1              PlayRgb7[1] = play_rgb;
+ 971   1              
+ 972   1              //1
+ 973   1              play_rgb = GetPlayRgbValue(Led_GRB6[10],Led_GRB6[11]);
+ 974   1              PlayRgb6[11] = play_rgb;
+ 975   1              PlayRgb7[2] = play_rgb;
+ 976   1              //1
+ 977   1              play_rgb = GetPlayRgbValue(Led_GRB6[9],Led_GRB6[10]);
+ 978   1              PlayRgb6[10] = play_rgb;
+ 979   1              PlayRgb7[3] = play_rgb;
+ 980   1              //1
+ 981   1              play_rgb = GetPlayRgbValue(Led_GRB6[8],Led_GRB6[9]);
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 17  
+
+ 982   1              PlayRgb6[9] = play_rgb;
+ 983   1              PlayRgb7[4] = play_rgb;
+ 984   1              
+ 985   1              //2
+ 986   1              play_rgb = GetPlayRgbValue(Led_GRB6[7],Led_GRB6[8]);
+ 987   1              PlayRgb6[8] = play_rgb;
+ 988   1              PlayRgb7[5] = play_rgb;
+ 989   1              //2
+ 990   1              play_rgb = GetPlayRgbValue(Led_GRB6[6],Led_GRB6[7]);
+ 991   1              PlayRgb6[7] = play_rgb;
+ 992   1              PlayRgb7[6] = play_rgb;
+ 993   1              //2
+ 994   1              play_rgb = GetPlayRgbValue(Led_GRB6[5],Led_GRB6[6]);
+ 995   1              PlayRgb6[6] = play_rgb;
+ 996   1              PlayRgb7[7] = play_rgb;
+ 997   1              
+ 998   1              //3
+ 999   1              play_rgb = GetPlayRgbValue(Led_GRB6[4],Led_GRB6[5]);
+1000   1              PlayRgb6[5] = play_rgb;
+1001   1              PlayRgb7[8] = play_rgb;
+1002   1              //3
+1003   1              play_rgb = GetPlayRgbValue(Led_GRB6[3],Led_GRB6[4]);
+1004   1              PlayRgb6[4] = play_rgb;
+1005   1              PlayRgb7[9] = play_rgb;
+1006   1              //3
+1007   1              play_rgb = GetPlayRgbValue(Led_GRB6[2],Led_GRB6[3]);
+1008   1              PlayRgb6[3] = play_rgb;
+1009   1              PlayRgb7[10] = play_rgb;
+1010   1              
+1011   1              //4
+1012   1              play_rgb = GetPlayRgbValue(Led_GRB6[1],Led_GRB6[2]);
+1013   1              PlayRgb6[2] = play_rgb;
+1014   1              PlayRgb7[11] = play_rgb;
+1015   1              //4
+1016   1              play_rgb = GetPlayRgbValue(Led_GRB6[0],Led_GRB6[1]);
+1017   1              PlayRgb6[1] = play_rgb;
+1018   1              PlayRgb7[12] = play_rgb;
+1019   1              //4
+1020   1              play_rgb = GetPlayRgbValue(Led_GRB7[17],Led_GRB6[0]);
+1021   1              PlayRgb6[0] = play_rgb;
+1022   1              PlayRgb7[13] = play_rgb;
+1023   1              
+1024   1              //5
+1025   1              if(PlayLight%3)
+1026   1              {
+1027   2                      PlayRgb7[17] = 0;
+1028   2                      PlayRgb7[16] = 0;
+1029   2                      PlayRgb7[15] = 0;
+1030   2                      PlayRgb7[14] = 0;
+1031   2              }       
+1032   1              else
+1033   1              {
+1034   2                      play_rgb = 40;
+1035   2                      PlayRgb7[17] = play_rgb;
+1036   2                      PlayRgb7[16] = play_rgb;
+1037   2                      PlayRgb7[15] = play_rgb;
+1038   2                      PlayRgb7[14] = play_rgb;
+1039   2              }       
+1040   1      }       
+1041                  
+1042                  
+1043          //=============================================================================
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 18  
+
+1044          //void SetAllDispRgb1_rol(void)
+1045          //{
+1046          //      SysFlag |= D_DispUpdata1;
+1047          //      
+1048          //      //8
+1049          //      Led_GRB7[17] = Rgb_Tab1[8];
+1050          //      //8
+1051          //      Led_GRB7[16] = Rgb_Tab1[8];
+1052          //      //8
+1053          //      Led_GRB7[15] = Rgb_Tab1[8];
+1054          //      //8
+1055          //      Led_GRB7[14] = Rgb_Tab1[8];
+1056          //      
+1057          //      //7
+1058          //      Led_GRB7[13] = Rgb_Tab1[7];
+1059          //      //7
+1060          //      Led_GRB7[12] = Rgb_Tab1[7];
+1061          //      //7
+1062          //      Led_GRB7[11] = Rgb_Tab1[7];
+1063          //      //7
+1064          //      Led_GRB7[10] = Rgb_Tab1[7];
+1065          //      
+1066          //      //6
+1067          //      Led_GRB7[9] = Rgb_Tab1[6];
+1068          //      //6
+1069          //      Led_GRB7[8] = Rgb_Tab1[6];
+1070          //      //6
+1071          //      Led_GRB7[7] = Rgb_Tab1[6];
+1072          //      //6
+1073          //      Led_GRB7[6] = Rgb_Tab1[6];
+1074          //      
+1075          //      //5
+1076          //      Led_GRB7[5] = Rgb_Tab1[5];
+1077          //      //5
+1078          //      Led_GRB7[4] = Rgb_Tab1[5];
+1079          //      //5
+1080          //      Led_GRB7[3] = Rgb_Tab1[5];
+1081          //      //5
+1082          //      Led_GRB7[2] = Rgb_Tab1[5];
+1083          //      
+1084          //      //4
+1085          //      Led_GRB7[1] = Rgb_Tab1[4];
+1086          //      //4
+1087          //      Led_GRB7[0] = Rgb_Tab1[4];
+1088          //      //4
+1089          //      Led_GRB6[17] = Rgb_Tab1[4];
+1090          //      //4
+1091          //      Led_GRB6[16] = Rgb_Tab1[4];
+1092          //      
+1093          //      //3
+1094          //      Led_GRB6[15] = Rgb_Tab1[3];
+1095          //      //3
+1096          //      Led_GRB6[14] = Rgb_Tab1[3];
+1097          //      //3
+1098          //      Led_GRB6[13] = Rgb_Tab1[3];
+1099          //      //3
+1100          //      Led_GRB6[12] = Rgb_Tab1[3];
+1101          //      
+1102          //      //2
+1103          //      Led_GRB6[11] = Rgb_Tab1[2];
+1104          //      //2
+1105          //      Led_GRB6[10] = Rgb_Tab1[2];
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 19  
+
+1106          //      //2
+1107          //      Led_GRB6[9] = Rgb_Tab1[2];
+1108          //      //2
+1109          //      Led_GRB6[8] = Rgb_Tab1[2];
+1110          //      
+1111          //      //1
+1112          //      Led_GRB6[7] = Rgb_Tab1[1];
+1113          //      //1
+1114          //      Led_GRB6[6] = Rgb_Tab1[1];
+1115          //      //1
+1116          //      Led_GRB6[5] = Rgb_Tab1[1];
+1117          //      //1
+1118          //      Led_GRB6[4] = Rgb_Tab1[1];
+1119          //      
+1120          //      //0
+1121          //      Led_GRB6[3] = Rgb_Tab1[0];
+1122          //      //0
+1123          //      Led_GRB6[2] = Rgb_Tab1[0];
+1124          //      //0
+1125          //      Led_GRB6[1] = Rgb_Tab1[0];
+1126          //      //0
+1127          //      Led_GRB6[0] = Rgb_Tab1[0];
+1128          //}
+1129          //
+1130          ////=============================================================================
+1131          //void SetAllDispRgb1_rol_S(void)
+1132          //{
+1133          //      uchar play_rgb;
+1134          //      //0
+1135          //      play_rgb = GetPlayRgbValue(Led_GRB6[1],Led_GRB6[0]);
+1136          //      PlayRgb6[0] = play_rgb;
+1137          //      play_rgb = GetPlayRgbValue(Led_GRB6[2],Led_GRB6[1]);
+1138          //      PlayRgb6[1] = play_rgb;
+1139          //      play_rgb = GetPlayRgbValue(Led_GRB6[3],Led_GRB6[2]);
+1140          //      PlayRgb6[2] = play_rgb;
+1141          //      play_rgb = GetPlayRgbValue(Led_GRB6[4],Led_GRB6[3]);
+1142          //      PlayRgb6[3] = play_rgb;
+1143          //      
+1144          //      //1
+1145          //      play_rgb = GetPlayRgbValue(Led_GRB6[5],Led_GRB6[4]);
+1146          //      PlayRgb6[4] = play_rgb;
+1147          //      play_rgb = GetPlayRgbValue(Led_GRB6[6],Led_GRB6[5]);
+1148          //      PlayRgb6[5] = play_rgb;
+1149          //      play_rgb = GetPlayRgbValue(Led_GRB6[7],Led_GRB6[6]);
+1150          //      PlayRgb6[6] = play_rgb;
+1151          //      play_rgb = GetPlayRgbValue(Led_GRB6[8],Led_GRB6[7]);
+1152          //      PlayRgb6[7] = play_rgb;
+1153          //      
+1154          //      //2
+1155          //      play_rgb = GetPlayRgbValue(Led_GRB6[9],Led_GRB6[8]);
+1156          //      PlayRgb6[8] = play_rgb;
+1157          //      play_rgb = GetPlayRgbValue(Led_GRB6[10],Led_GRB6[9]);
+1158          //      PlayRgb6[9] = play_rgb;
+1159          //      play_rgb = GetPlayRgbValue(Led_GRB6[11],Led_GRB6[10]);
+1160          //      PlayRgb6[10] = play_rgb;
+1161          //      play_rgb = GetPlayRgbValue(Led_GRB6[12],Led_GRB6[11]);
+1162          //      PlayRgb6[11] = play_rgb;
+1163          //      
+1164          //      //3
+1165          //      play_rgb = GetPlayRgbValue(Led_GRB6[13],Led_GRB6[12]);
+1166          //      PlayRgb6[12] = play_rgb;
+1167          //      play_rgb = GetPlayRgbValue(Led_GRB6[14],Led_GRB6[13]);
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 20  
+
+1168          //      PlayRgb6[13] = play_rgb;
+1169          //      play_rgb = GetPlayRgbValue(Led_GRB6[15],Led_GRB6[14]);
+1170          //      PlayRgb6[14] = play_rgb;
+1171          //      play_rgb = GetPlayRgbValue(Led_GRB6[16],Led_GRB6[15]);
+1172          //      PlayRgb6[15] = play_rgb;
+1173          //      
+1174          //      //4
+1175          //      play_rgb = GetPlayRgbValue(Led_GRB6[17],Led_GRB6[16]);
+1176          //      PlayRgb6[16] = play_rgb;
+1177          //      play_rgb = GetPlayRgbValue(Led_GRB7[0],Led_GRB6[17]);
+1178          //      PlayRgb6[17] = play_rgb;
+1179          //      play_rgb = GetPlayRgbValue(Led_GRB7[1],Led_GRB7[0]);
+1180          //      PlayRgb7[0] = play_rgb;
+1181          //      play_rgb = GetPlayRgbValue(Led_GRB7[2],Led_GRB7[1]);
+1182          //      PlayRgb7[1] = play_rgb;
+1183          //      
+1184          //      //5
+1185          //      play_rgb = GetPlayRgbValue(Led_GRB7[3],Led_GRB7[2]);
+1186          //      PlayRgb7[2] = play_rgb;
+1187          //      play_rgb = GetPlayRgbValue(Led_GRB7[4],Led_GRB7[3]);
+1188          //      PlayRgb7[3] = play_rgb;
+1189          //      play_rgb = GetPlayRgbValue(Led_GRB7[5],Led_GRB7[4]);
+1190          //      PlayRgb7[4] = play_rgb;
+1191          //      play_rgb = GetPlayRgbValue(Led_GRB7[6],Led_GRB7[5]);
+1192          //      PlayRgb7[5] = play_rgb;
+1193          //      
+1194          //      //6
+1195          //      play_rgb = GetPlayRgbValue(Led_GRB7[7],Led_GRB7[6]);
+1196          //      PlayRgb7[6] = play_rgb;
+1197          //      play_rgb = GetPlayRgbValue(Led_GRB7[8],Led_GRB7[7]);
+1198          //      PlayRgb7[7] = play_rgb;
+1199          //      play_rgb = GetPlayRgbValue(Led_GRB7[9],Led_GRB7[8]);
+1200          //      PlayRgb7[8] = play_rgb;
+1201          //      play_rgb = GetPlayRgbValue(Led_GRB7[10],Led_GRB7[9]);
+1202          //      PlayRgb7[9] = play_rgb;
+1203          //      
+1204          //      //7
+1205          //      play_rgb = GetPlayRgbValue(Led_GRB7[11],Led_GRB7[10]);
+1206          //      PlayRgb7[10] = play_rgb;
+1207          //      play_rgb = GetPlayRgbValue(Led_GRB7[12],Led_GRB7[11]);
+1208          //      PlayRgb7[11] = play_rgb;
+1209          //      play_rgb = GetPlayRgbValue(Led_GRB7[13],Led_GRB7[12]);
+1210          //      PlayRgb7[12] = play_rgb;
+1211          //      play_rgb = GetPlayRgbValue(Led_GRB7[14],Led_GRB7[13]);
+1212          //      PlayRgb7[13] = play_rgb;
+1213          //      
+1214          //      //8
+1215          //      play_rgb = GetPlayRgbValue(Led_GRB7[15],Led_GRB7[14]);
+1216          //      PlayRgb7[14] = play_rgb;
+1217          //      play_rgb = GetPlayRgbValue(Led_GRB7[16],Led_GRB7[15]);
+1218          //      PlayRgb7[15] = play_rgb;
+1219          //      play_rgb = GetPlayRgbValue(Led_GRB7[17],Led_GRB7[16]);
+1220          //      PlayRgb7[16] = play_rgb;
+1221          //      play_rgb = GetPlayRgbValue(Led_GRB6[0],Led_GRB7[17]);
+1222          //      PlayRgb7[17] = play_rgb;
+1223          //}     
+1224                  
+1225          //=============================================================================
+1226          void SetAllDispRgb1_rol_f(void)
+1227          {
+1228   1              SysFlag |= D_DispUpdata1;
+1229   1              
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 21  
+
+1230   1              //8
+1231   1              Led_GRB7[17] = Rgb_Tab1[8];
+1232   1              //8
+1233   1              Led_GRB7[16] = Rgb_Tab1[8];
+1234   1              //8
+1235   1              Led_GRB7[15] = Rgb_Tab1[8];
+1236   1              //8
+1237   1              Led_GRB7[14] = Rgb_Tab1[8];
+1238   1              
+1239   1              //7
+1240   1              Led_GRB7[13] = Rgb_Tab1[7];
+1241   1              //7
+1242   1              Led_GRB7[12] = Rgb_Tab1[7];
+1243   1              //7
+1244   1              Led_GRB7[11] = Rgb_Tab1[7];
+1245   1              //7
+1246   1              Led_GRB7[10] = Rgb_Tab1[7];
+1247   1              
+1248   1              //6
+1249   1              Led_GRB7[9] = Rgb_Tab1[6];
+1250   1              //6
+1251   1              Led_GRB7[8] = Rgb_Tab1[6];
+1252   1              //6
+1253   1              Led_GRB7[7] = Rgb_Tab1[6];
+1254   1              //6
+1255   1              Led_GRB7[6] = Rgb_Tab1[6];
+1256   1              
+1257   1              //5
+1258   1              Led_GRB7[5] = Rgb_Tab1[5];
+1259   1              //5
+1260   1              Led_GRB7[4] = Rgb_Tab1[5];
+1261   1              //5
+1262   1              Led_GRB7[3] = Rgb_Tab1[5];
+1263   1              //5
+1264   1              Led_GRB7[2] = Rgb_Tab1[5];
+1265   1              
+1266   1              //4
+1267   1              Led_GRB7[1] = Rgb_Tab1[4];
+1268   1              //4
+1269   1              Led_GRB7[0] = Rgb_Tab1[4];
+1270   1              //4
+1271   1              Led_GRB6[17] = Rgb_Tab1[4];
+1272   1              //4
+1273   1              Led_GRB6[16] = Rgb_Tab1[4];
+1274   1              
+1275   1              //3
+1276   1              Led_GRB6[15] = Rgb_Tab1[3];
+1277   1              //3
+1278   1              Led_GRB6[14] = Rgb_Tab1[3];
+1279   1              //3
+1280   1              Led_GRB6[13] = Rgb_Tab1[3];
+1281   1              //3
+1282   1              Led_GRB6[12] = Rgb_Tab1[3];
+1283   1              
+1284   1              //2
+1285   1              Led_GRB6[11] = Rgb_Tab1[2];
+1286   1              //2
+1287   1              Led_GRB6[10] = Rgb_Tab1[2];
+1288   1              //2
+1289   1              Led_GRB6[9] = Rgb_Tab1[2];
+1290   1              //2
+1291   1              Led_GRB6[8] = Rgb_Tab1[2];
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 22  
+
+1292   1              
+1293   1              //1
+1294   1              Led_GRB6[7] = Rgb_Tab1[1];
+1295   1              //1
+1296   1              Led_GRB6[6] = Rgb_Tab1[1];
+1297   1              //1
+1298   1              Led_GRB6[5] = Rgb_Tab1[1];
+1299   1              //1
+1300   1              Led_GRB6[4] = Rgb_Tab1[1];
+1301   1              
+1302   1              //0
+1303   1              Led_GRB6[3] = Rgb_Tab1[0];
+1304   1              //0
+1305   1              Led_GRB6[2] = Rgb_Tab1[0];
+1306   1              //0
+1307   1              Led_GRB6[1] = Rgb_Tab1[0];
+1308   1              //0
+1309   1              Led_GRB6[0] = Rgb_Tab1[0];
+1310   1      }
+1311          
+1312          //=============================================================================
+1313          void SetAllDispRgb1_rol_f_S(void)
+1314          {
+1315   1              uchar play_rgb;
+1316   1              //0
+1317   1              play_rgb = GetPlayRgbValue(Led_GRB6[2],Led_GRB6[0]);
+1318   1              PlayRgb6[0] = play_rgb;
+1319   1              PlayRgb6[1] = play_rgb;
+1320   1              play_rgb = GetPlayRgbValue(Led_GRB6[4],Led_GRB6[2]);
+1321   1              PlayRgb6[2] = play_rgb;
+1322   1              PlayRgb6[3] = play_rgb;
+1323   1              
+1324   1              //1
+1325   1              play_rgb = GetPlayRgbValue(Led_GRB6[6],Led_GRB6[4]);
+1326   1              PlayRgb6[4] = play_rgb;
+1327   1              PlayRgb6[5] = play_rgb;
+1328   1              play_rgb = GetPlayRgbValue(Led_GRB6[8],Led_GRB6[6]);
+1329   1              PlayRgb6[6] = play_rgb;
+1330   1              PlayRgb6[7] = play_rgb;
+1331   1              
+1332   1              //2
+1333   1              play_rgb = GetPlayRgbValue(Led_GRB6[10],Led_GRB6[8]);
+1334   1              PlayRgb6[8] = play_rgb;
+1335   1              PlayRgb6[9] = play_rgb;
+1336   1              play_rgb = GetPlayRgbValue(Led_GRB6[12],Led_GRB6[10]);
+1337   1              PlayRgb6[10] = play_rgb;
+1338   1              PlayRgb6[11] = play_rgb;
+1339   1              
+1340   1              //3
+1341   1              play_rgb = GetPlayRgbValue(Led_GRB6[14],Led_GRB6[12]);
+1342   1              PlayRgb6[12] = play_rgb;
+1343   1              PlayRgb6[13] = play_rgb;
+1344   1              play_rgb = GetPlayRgbValue(Led_GRB6[16],Led_GRB6[14]);
+1345   1              PlayRgb6[14] = play_rgb;
+1346   1              PlayRgb6[15] = play_rgb;
+1347   1              
+1348   1              //4
+1349   1              play_rgb = GetPlayRgbValue(Led_GRB7[0],Led_GRB6[16]);
+1350   1              PlayRgb6[16] = play_rgb;
+1351   1              PlayRgb6[17] = play_rgb;
+1352   1              play_rgb = GetPlayRgbValue(Led_GRB7[2],Led_GRB7[0]);
+1353   1              PlayRgb7[0] = play_rgb;
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 23  
+
+1354   1              PlayRgb7[1] = play_rgb;
+1355   1              
+1356   1              //5
+1357   1              play_rgb = GetPlayRgbValue(Led_GRB7[4],Led_GRB7[2]);
+1358   1              PlayRgb7[2] = play_rgb;
+1359   1              PlayRgb7[3] = play_rgb;
+1360   1              play_rgb = GetPlayRgbValue(Led_GRB7[6],Led_GRB7[4]);
+1361   1              PlayRgb7[4] = play_rgb;
+1362   1              PlayRgb7[5] = play_rgb;
+1363   1              
+1364   1              //6
+1365   1              play_rgb = GetPlayRgbValue(Led_GRB7[8],Led_GRB7[6]);
+1366   1              PlayRgb7[6] = play_rgb;
+1367   1              PlayRgb7[7] = play_rgb;
+1368   1              play_rgb = GetPlayRgbValue(Led_GRB7[10],Led_GRB7[8]);
+1369   1              PlayRgb7[8] = play_rgb;
+1370   1              PlayRgb7[9] = play_rgb;
+1371   1              
+1372   1              //7
+1373   1              play_rgb = GetPlayRgbValue(Led_GRB7[12],Led_GRB7[10]);
+1374   1              PlayRgb7[10] = play_rgb;
+1375   1              PlayRgb7[11] = play_rgb;
+1376   1              play_rgb = GetPlayRgbValue(Led_GRB7[14],Led_GRB7[12]);
+1377   1              PlayRgb7[12] = play_rgb;
+1378   1              PlayRgb7[13] = play_rgb;
+1379   1              
+1380   1              //8
+1381   1              play_rgb = GetPlayRgbValue(Led_GRB7[16],Led_GRB7[14]);
+1382   1              PlayRgb7[14] = play_rgb;
+1383   1              PlayRgb7[15] = play_rgb;
+1384   1              play_rgb = GetPlayRgbValue(Led_GRB6[0],Led_GRB7[16]);
+1385   1              PlayRgb7[16] = play_rgb;
+1386   1              PlayRgb7[17] = play_rgb;
+1387   1      }       
+1388                  
+1389          //=============================================================================
+1390          void SetDispRamdon1(void)
+1391          {
+1392   1              uchar i,j;
+1393   1              SysFlag |= D_DispUpdata1;
+1394   1              Random();
+1395   1              for(i=0;i<18;i++)
+1396   1              {
+1397   2                      j++;
+1398   2                      if(j>8)
+1399   2                              j=0;
+1400   2                      Led_GRB6[i] = Rgb_Tab1[j];
+1401   2                      j++;
+1402   2                      if(j>8)
+1403   2                              j=0;
+1404   2                      Led_GRB7[i] = Rgb_Tab1[j];
+1405   2              }
+1406   1      }
+1407          
+1408          //=============================================================================
+1409          void SetDispRamdon1_S(void)
+1410          {
+1411   1              uchar i;
+1412   1              for(i=0;i<18;i++)
+1413   1              {
+1414   2                      PlayRgb6[i] = 40;       //GetPlayRgbValue2(Led_GRB6[i]);
+1415   2                      PlayRgb7[i] = 40;;      //GetPlayRgbValue2(Led_GRB7[i]);
+C51 COMPILER V9.00   LED                                                                   01/25/2026 17:20:40 PAGE 24  
+
+1416   2              }
+1417   1      }
+1418          //=============================================================================
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   4237    ----
+   CONSTANT SIZE    =    460    ----
+   XDATA SIZE       =    207    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      3      46
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

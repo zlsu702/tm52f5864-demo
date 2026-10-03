@@ -1,0 +1,807 @@
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE REFRESH
+OBJECT MODULE PLACED IN .\Objects\REFRESH.obj
+COMPILER INVOKED BY: D:\Program Files\keil\C51\BIN\C51.EXE src\REFRESH.c BROWSE INCDIR(.\src) DEBUG OBJECTEXTEND PRINT(.
+                    -\Listings\REFRESH.lst) OBJECT(.\Objects\REFRESH.obj)
+
+line level    source
+
+   1          //=============================================================================
+   2          //Name          :LED.c
+   3          //Purpose       :LED显示函数
+   4          //Version       :V1.0
+   5          //Author        :
+   6          //Date          :2022.05.24
+   7          //=============================================================================
+   8          #include "AllHeadFile.h"
+   9          //=============================================================================
+  10          
+  11          //=============================================================================
+  12          static void FlashSecClr(void);
+  13          //static void FlashSecDisp(void);
+  14          static void HalfSecClr(void);
+  15          static void HalfSecDisp(void);
+  16          
+  17          
+  18          unsigned char code Week_Bit_Tab[] =
+  19          {
+  20                  0x40,   //SUN
+  21                  0x01,   //MON
+  22                  0x02,   //TUE
+  23                  0x04,   //WED
+  24                  0x08,   //THU
+  25                  0x10,   //FRI
+  26                  0x20,   //SAT
+  27                  0x1f,   //1~5
+  28                  0x3f,   //1-6
+  29                  0x7f,   //0~6
+  30                  0x00    //--
+  31          };
+  32          
+  33          //=============================================================================
+  34          //功能:
+  35          //输入参数：无
+  36          //输出参数：无
+  37          //备注：
+  38          //=============================================================================
+  39          static void DispAlarmFlag(void)
+  40          {
+  41   1              uchar disp_flag;
+  42   1              if(Mode>M_SetAlarm)
+  43   1                      disp_flag = 0x00;
+  44   1              else if(Mode>M_SetTime)
+  45   1              {
+  46   2                      if(AlarmCnt)
+  47   2                              disp_flag = D_Alarm2On;
+  48   2                      else
+  49   2                              disp_flag = D_Alarm1On; 
+  50   2              }
+  51   1              else    
+  52   1                      disp_flag = ProFlag1&(D_Alarm1On|D_Alarm2On);
+  53   1              
+  54   1              if(ProFlag2&D_PlayAlarm1)
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 2   
+
+  55   1                      disp_flag |= 0x01;      
+  56   1              else if(ProFlag2&D_PlayAlarm2)
+  57   1                      disp_flag |= 0x02;              
+  58   1              DispSybmols(Led_Alarm,2,disp_flag);     
+  59   1      }       
+  60          
+  61          static void ClearAlarmFlag(void)
+  62          {
+  63   1              uchar disp_flag;
+  64   1              if(Mode==M_Timer)
+  65   1                      disp_flag = 0x00;
+  66   1              else if(Mode>M_SetTime)
+  67   1              {
+  68   2                      if(AlarmCnt)
+  69   2                              disp_flag = D_Alarm2On;
+  70   2                      else
+  71   2                              disp_flag = D_Alarm1On; 
+  72   2              }
+  73   1              else    
+  74   1                      disp_flag = ProFlag1&(D_Alarm1On|D_Alarm2On);
+  75   1              
+  76   1              if(ProFlag2&D_PlayAlarm1)
+  77   1                      disp_flag &= ~0x01;     
+  78   1              else if(ProFlag2&D_PlayAlarm2)
+  79   1                      disp_flag &= ~0x02;     
+  80   1              DispSybmols(Led_Alarm,2,disp_flag);     
+  81   1      }
+  82          
+  83          //=============================================================================
+  84          //功能:
+  85          //输入参数：无
+  86          //输出参数：无
+  87          //备注：
+  88          //=============================================================================
+  89          static void DispDstFlag(void)
+  90          {
+  91   1              if(ProFlag1&D_Dst)
+  92   1                      DispSybmol(Led_Dst,1);  
+  93   1              else    
+  94   1                      DispSybmol(Led_Dst,0);  
+  95   1      }       
+  96          //=============================================================================
+  97          //功能:共用显示
+  98          //输入参数：无
+  99          //输出参数：无
+ 100          //备注：
+ 101          //=============================================================================
+ 102          static void DispHour(uchar disp_hour)
+ 103          {
+ 104   1              uchar dispH,dispL;      
+ 105   1              
+ 106   1              if(ProFlag&D_24Hour) 
+ 107   1              {
+ 108   2                      DispSybmols(Led_AmPm,2,0x00);   
+ 109   2              }
+ 110   1              else    
+ 111   1              {       
+ 112   2                      if(disp_hour>11)
+ 113   2                      {
+ 114   3                              if(disp_hour>12)
+ 115   3                                      disp_hour = disp_hour-12;
+ 116   3                              DispSybmols(Led_AmPm,2,0x02);   //P  
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 3   
+
+ 117   3                      }                       
+ 118   2                      else
+ 119   2                      {
+ 120   3                              if(disp_hour==0)
+ 121   3                                      disp_hour = 12; 
+ 122   3                              DispSybmols(Led_AmPm,2,0x01);   //A     
+ 123   3                      }       
+ 124   2              }       
+ 125   1      
+ 126   1              dispH = disp_hour/10;   
+ 127   1              dispL = disp_hour%10;   
+ 128   1              if(dispH==0)
+ 129   1                      dispH = 0x0a;   
+ 130   1              DispDigit1(Led_Num1,dispH);
+ 131   1              DispDigit1(Led_Num2,dispL);
+ 132   1              
+ 133   1      }
+ 134          
+ 135          static void DispMinute(uchar disp_minute)
+ 136          {
+ 137   1              uchar dispH,dispL;      
+ 138   1              dispH = disp_minute/10; 
+ 139   1              dispL = disp_minute%10; 
+ 140   1              DispDigit1(Led_Num3,dispH);
+ 141   1              DispDigit1(Led_Num4,dispL);
+ 142   1      }
+ 143          
+ 144          static void DispWeek(uchar disp_week)
+ 145          {
+ 146   1              if(disp_week==0x0a)
+ 147   1              {
+ 148   2                      DispSybmols(Led_WeekR,7,0x00);
+ 149   2                      DispSybmols(Led_WeekW,7,0x00);
+ 150   2              }       
+ 151   1              else
+ 152   1              {
+ 153   2                      DispSybmols(Led_WeekR,7,Week_Bit_Tab[disp_week]);
+ 154   2                      DispSybmols(Led_WeekW,7,Week_Bit_Tab[disp_week]^0xff);          
+ 155   2              }       
+ 156   1      }
+ 157          
+ 158          //=============================================================================
+ 159          //功能:disp time
+ 160          //输入参数：无
+ 161          //输出参数：无
+ 162          //备注：
+ 163          //=============================================================================
+ 164          static void DispTime(void)
+ 165          {
+ 166   1              DispSybmols(Led_Col,2,0x03);
+ 167   1              DispHour(Hour);
+ 168   1              DispMinute(Minute);
+ 169   1              DispWeek(Week);
+ 170   1      }
+ 171          //=============================================================================
+ 172          //功能:DispHourMode
+ 173          //输入参数：无
+ 174          //输出参数：无
+ 175          //备注：
+ 176          //=============================================================================
+ 177          static void DispHourMode(void)
+ 178          {
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 4   
+
+ 179   1              DispSybmols(Led_AmPm,2,0x00);
+ 180   1              DispSybmols(Led_Col,2,0x00);
+ 181   1              DispWeek(Week);
+ 182   1              DispDigit1(Led_Num1,0x0a);
+ 183   1              DispDigit1(Led_Num4,0x0c);              //H
+ 184   1              if(ProFlag&D_24Hour) 
+ 185   1              {
+ 186   2                      DispDigit1(Led_Num2,0x02);      
+ 187   2                      DispDigit1(Led_Num3,0x04);              
+ 188   2              }       
+ 189   1              else
+ 190   1              {
+ 191   2                      DispDigit1(Led_Num2,0x01);      
+ 192   2                      DispDigit1(Led_Num3,0x02);              
+ 193   2              }       
+ 194   1      }       
+ 195          //=============================================================================
+ 196          //功能:DispHourMode
+ 197          //输入参数：无
+ 198          //输出参数：无
+ 199          //备注：
+ 200          //=============================================================================
+ 201          static void DispYear(void)
+ 202          {
+ 203   1              DispSybmols(Led_AmPm,2,0x00);
+ 204   1              DispSybmols(Led_Col,2,0x00);
+ 205   1              DispWeek(Week);
+ 206   1              DispDigit1(Led_Num1,0x02);
+ 207   1              DispDigit1(Led_Num2,0x00);      
+ 208   1              DispMinute(Year);       
+ 209   1      }
+ 210          //=============================================================================
+ 211          //功能:disp alarm
+ 212          //输入参数：无
+ 213          //输出参数：无
+ 214          //备注：
+ 215          //=============================================================================
+ 216          static void DispAlarm(void)
+ 217          {
+ 218   1              DispSybmols(Led_Col,2,0x03);
+ 219   1              DispHour(AlHour[AlarmCnt]);
+ 220   1              DispMinute(AlMinute[AlarmCnt]); 
+ 221   1      }
+ 222          
+ 223          static void DispAlarmMode(void)
+ 224          {
+ 225   1              DispSybmols(Led_WeekW,7,0x00);  
+ 226   1              DispSybmols(Led_WeekR,7,Week_Bit_Tab[AlMode[AlarmCnt]+7]);      
+ 227   1      }
+ 228          
+ 229          static void DispAlarmOnOff(void)
+ 230          {
+ 231   1              uchar disp_onoff;
+ 232   1              DispSybmols(Led_AmPm,2,0x00);
+ 233   1              DispSybmols(Led_Col,2,0x00);
+ 234   1              DispDigit1(Led_Num1,0x0d);              //A
+ 235   1              DispDigit1(Led_Num2,0x0e);              //L
+ 236   1              DispDigit1(Led_Num3,0x00);              //O
+ 237   1              
+ 238   1              disp_onoff = 0x0f;
+ 239   1              if(AlarmCnt)
+ 240   1              {
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 5   
+
+ 241   2                      if(ProFlag1&D_Alarm2On)
+ 242   2                              disp_onoff = 0x10;
+ 243   2              }       
+ 244   1              else
+ 245   1              {
+ 246   2                      if(ProFlag1&D_Alarm1On)
+ 247   2                              disp_onoff = 0x10;
+ 248   2              }               
+ 249   1              DispDigit1(Led_Num4,disp_onoff);
+ 250   1      }
+ 251          
+ 252          static void DispAlarmMode1(void)
+ 253          {
+ 254   1              DispSybmols(Led_AmPm,2,0x00);
+ 255   1              DispSybmols(Led_Col,2,0x00);
+ 256   1              DispDigit1(Led_Num1,0x0a);              
+ 257   1              DispDigit1(Led_Num2,0x11);              //d
+ 258   1              DispDigit1(Led_Num3,0x0b);              //-
+ 259   1              DispDigit1(Led_Num4,AlMode[AlarmCnt]+5);        
+ 260   1      }
+ 261          
+ 262          //=============================================================================
+ 263          //功能:temp_humi
+ 264          //输入参数：无
+ 265          //输出参数：无
+ 266          //备注：
+ 267          //=============================================================================
+ 268          static void DispTempHumi(void)
+ 269          {
+ 270   1              uchar dispH,dispM,dispL;
+ 271   1              
+ 272   1              if(ProFlag1&D_TempF)
+ 273   1              {
+ 274   2                      DispSybmols(Led_TH,3,0x06);     //F
+ 275   2              }       
+ 276   1              else    
+ 277   1              {
+ 278   2                      DispSybmols(Led_TH,3,0x05);     //C
+ 279   2              }       
+ 280   1              
+ 281   1              if(TempNum[1]==TEMP_ERR)        
+ 282   1              {
+ 283   2                      DispSybmols(Led_NumT1,2,0x00);  
+ 284   2                      DispDigit(Led_NumT2,0x0b);      
+ 285   2                      DispDigit(Led_NumT3,0x0b);      
+ 286   2      
+ 287   2              }       
+ 288   1              else if(TempNum[1]==TEMP_HIGH)
+ 289   1              {
+ 290   2                      DispSybmols(Led_NumT1,2,0x00);  
+ 291   2                      DispDigit(Led_NumT2,0x0c);      //H
+ 292   2                      DispDigit(Led_NumT3,0x0c);      //H
+ 293   2                      
+ 294   2              }
+ 295   1              else if(TempNum[1]==TEMP_LOW)
+ 296   1              {
+ 297   2                      DispSybmols(Led_NumT1,2,0x00);  
+ 298   2                      DispDigit(Led_NumT2,0x0d);      //L
+ 299   2                      DispDigit(Led_NumT3,0x0d);      //L
+ 300   2              }
+ 301   1              else
+ 302   1              {
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 6   
+
+ 303   2                      if(TempNum[1]&0x80)
+ 304   2                      {
+ 305   3                              if(ProFlag1&D_TempF)
+ 306   3                              {
+ 307   4                                      dispH = 32-(uchar)(((uint)TempNum[0]*18+5)/10);
+ 308   4                                      dispM = dispH/10;
+ 309   4                                      dispL = dispH%10;
+ 310   4                                      dispH = 0x00;
+ 311   4                              }       
+ 312   3                              else
+ 313   3                              {
+ 314   4                                      dispH = 0x80;
+ 315   4                                      dispM = TempNum[0]/10;
+ 316   4                                      dispL = TempNum[0]%10;
+ 317   4                              }       
+ 318   3                      }       
+ 319   2                      else 
+ 320   2                      {
+ 321   3                              if(ProFlag1&D_TempF)
+ 322   3                              {
+ 323   4                                      dispL = 32+(uchar)(((uint)TempNum[0]*18+5)/10);
+ 324   4                              }       
+ 325   3                              else
+ 326   3                              {
+ 327   4                                      dispL = TempNum[0];
+ 328   4                              }       
+ 329   3                              dispH = dispL/100;
+ 330   3                              dispM = (dispL%100)/10;
+ 331   3                              dispL = (dispL%100)%10;
+ 332   3                      }       
+ 333   2                      
+ 334   2      //              dispH = DispRv/100;
+ 335   2      //              dispM = (DispRv%100)/10;
+ 336   2      //              dispL = (DispRv%100)%10;
+ 337   2      //                      
+ 338   2      //              DispSybmols(Led_NumT1,2,dispH);
+ 339   2      //              DispDigit(Led_NumT2,dispM);     
+ 340   2      //              DispDigit(Led_NumT3,dispL);     
+ 341   2                      
+ 342   2                      if(dispH==1)
+ 343   2                      {
+ 344   3                              DispSybmols(Led_NumT1,2,0x03);
+ 345   3                              DispDigit(Led_NumT2,dispM);     
+ 346   3                              DispDigit(Led_NumT3,dispL);     
+ 347   3                      }       
+ 348   2                      else
+ 349   2                      {
+ 350   3                              DispSybmols(Led_NumT1,2,0x00);
+ 351   3                              if(dispH==0)
+ 352   3                              {
+ 353   4                                      if(dispM==0)
+ 354   4                                              dispM = 0x0a;
+ 355   4                                      DispDigit(Led_NumT2,dispM);     
+ 356   4                                      DispDigit(Led_NumT3,dispL);     
+ 357   4                              }       
+ 358   3                              else
+ 359   3                              {
+ 360   4                                      DispDigit(Led_NumT2,0x0b);      
+ 361   4                                      DispDigit(Led_NumT3,dispL);     
+ 362   4                              }       
+ 363   3                      }       
+ 364   2              }
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 7   
+
+ 365   1              
+ 366   1              
+ 367   1              if(TempNum[1]==TEMP_ERR)        
+ 368   1              {
+ 369   2                      DispDigit(Led_NumH1,0x0b);      
+ 370   2                      DispDigit(Led_NumH2,0x0b);      
+ 371   2              }
+ 372   1              else
+ 373   1              {
+ 374   2                      dispM = HumiNum/10;
+ 375   2                      dispL = HumiNum%10;
+ 376   2                      if(dispM==0)
+ 377   2                              dispM = 0x0a;
+ 378   2                      DispDigit(Led_NumH1,dispM);     
+ 379   2                      DispDigit(Led_NumH2,dispL);     
+ 380   2              }       
+ 381   1      }
+ 382          
+ 383          //=============================================================================
+ 384          //功能:disp data
+ 385          //输入参数：无
+ 386          //输出参数：无
+ 387          //备注：
+ 388          //=============================================================================
+ 389          static void DispDate(void)
+ 390          {
+ 391   1              uchar dispH,dispL;
+ 392   1              DispSybmols(Led_Date,3,0x07);
+ 393   1              dispH = Month/10;
+ 394   1              dispL = Month%10;
+ 395   1              if(dispH)
+ 396   1                      DispSybmols(Led_NumD1,2,0x03);
+ 397   1              else    
+ 398   1                      DispSybmols(Led_NumD1,2,0x00);
+ 399   1              DispDigit(Led_NumD2,dispL);     
+ 400   1              
+ 401   1              dispH = Day/10;
+ 402   1              dispL = Day%10;
+ 403   1              DispDigit(Led_NumD3,dispH);     
+ 404   1              DispDigit(Led_NumD4,dispL);     
+ 405   1      }
+ 406          //=============================================================================
+ 407          //功能:disp displv
+ 408          //输入参数：无
+ 409          //输出参数：无
+ 410          //备注：
+ 411          //=============================================================================
+ 412          static void DispSetDispLv(void)
+ 413          {
+ 414   1              uchar dispH,dispL;
+ 415   1              DispSybmols(Led_Col,2,0x00);
+ 416   1              DispDigit1(Led_Num1,0x0E);              //L
+ 417   1              DispDigit1(Led_Num2,0x0B);              //-
+ 418   1              if(ProFlag1&D_AutoDimmer)
+ 419   1              {
+ 420   2                      DispDigit1(Led_Num3,0x0D);      //A
+ 421   2                      DispDigit1(Led_Num4,0x12);      //U
+ 422   2              }       
+ 423   1              else
+ 424   1              {
+ 425   2                      dispL = DispLv+1;
+ 426   2                      dispH = dispL/10;       
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 8   
+
+ 427   2                      dispL = dispL%10;       
+ 428   2                      DispDigit1(Led_Num3,dispH);
+ 429   2                      DispDigit1(Led_Num4,dispL);
+ 430   2              }       
+ 431   1      }
+ 432          
+ 433          static void DispSetDimmerOnOff(void)
+ 434          {
+ 435   1              DispSybmols(Led_Col,2,0x00);
+ 436   1              DispDigit1(Led_Num1,0x0a);      
+ 437   1              if(ProFlag1&D_AutoDimmer)
+ 438   1              {
+ 439   2                      DispDigit1(Led_Num2,0x0a);      
+ 440   2                      DispDigit1(Led_Num3,0x00);      //O
+ 441   2                      DispDigit1(Led_Num4,0x10);      //N
+ 442   2              }       
+ 443   1              else
+ 444   1              {
+ 445   2                      DispDigit1(Led_Num2,0x00);      //O     
+ 446   2                      DispDigit1(Led_Num3,0x0f);      //F
+ 447   2                      DispDigit1(Led_Num4,0x0f);      //F
+ 448   2              }       
+ 449   1      }
+ 450          
+ 451          //=============================================================================
+ 452          //功能:disp light
+ 453          //输入参数：无
+ 454          //输出参数：无
+ 455          //备注：
+ 456          //=============================================================================
+ 457          static void DispSetLightMode(void)
+ 458          {
+ 459   1              uchar dispH,dispL;
+ 460   1              DispSybmols(Led_Col,2,0x00);
+ 461   1              DispDigit1(Led_Num1,0x13);              //C
+ 462   1              DispDigit1(Led_Num2,0x0E);              //L
+ 463   1              dispL = LightMode+1;
+ 464   1              dispH = dispL/10;       
+ 465   1              dispL = dispL%10;       
+ 466   1              DispDigit1(Led_Num3,dispH);
+ 467   1              DispDigit1(Led_Num4,dispL);
+ 468   1      }
+ 469          
+ 470          static void DispSetLightLv(void)
+ 471          {
+ 472   1              uchar dispH,dispL;
+ 473   1              DispSybmols(Led_Col,2,0x00);
+ 474   1              DispDigit1(Led_Num1,0x0a);              
+ 475   1              DispDigit1(Led_Num2,0x13);              //C
+ 476   1              dispL = LightLv+1;
+ 477   1              dispH = dispL/10;       
+ 478   1              dispL = dispL%10;       
+ 479   1              DispDigit1(Led_Num3,dispH);
+ 480   1              DispDigit1(Led_Num4,dispL);
+ 481   1      }
+ 482          
+ 483          //=============================================================================
+ 484          //功能:disp sound
+ 485          //输入参数：无
+ 486          //输出参数：无
+ 487          //备注：
+ 488          //=============================================================================
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 9   
+
+ 489          static void DispSetSoundLv(void)
+ 490          {
+ 491   1              uchar dispH,dispL;
+ 492   1              DispSybmols(Led_Col,2,0x00);
+ 493   1              DispDigit1(Led_Num1,0x0a);      
+ 494   1              if(ProFlag1&D_ToneDis)
+ 495   1              {
+ 496   2                      DispDigit1(Led_Num2,0x00);              //O     
+ 497   2                      DispDigit1(Led_Num3,0x0f);              //F
+ 498   2                      DispDigit1(Led_Num4,0x0f);              //F
+ 499   2              }       
+ 500   1              else
+ 501   1              {
+ 502   2                      DispDigit1(Led_Num2,0x12);              //U
+ 503   2                      dispL = SoundLv+1;
+ 504   2                      dispH = dispL/10;       
+ 505   2                      dispL = dispL%10;       
+ 506   2                      DispDigit1(Led_Num3,dispH);
+ 507   2                      DispDigit1(Led_Num4,dispL);     
+ 508   2              }       
+ 509   1      }
+ 510                  
+ 511          //=============================================================================
+ 512          //功能:disp timer
+ 513          //输入参数：无
+ 514          //输出参数：无
+ 515          //备注：
+ 516          //=============================================================================
+ 517          static void DispTimer(void)
+ 518          {
+ 519   1              uchar dispH,dispL;
+ 520   1              DispSybmols(Led_Col,2,0x03);
+ 521   1              DispMinute(TimerSec);   
+ 522   1              dispH = TimerMin/10;    
+ 523   1              dispL = TimerMin%10;    
+ 524   1              DispDigit1(Led_Num1,dispH);
+ 525   1              DispDigit1(Led_Num2,dispL);
+ 526   1      }
+ 527          
+ 528          static void ClearTimerNoDisp(void)
+ 529          {
+ 530   1              DispWeek(0x0a);
+ 531   1              DispSybmols(Led_AmPm,2,0x00);
+ 532   1              DispSybmols(Led_TH,3,0x00);
+ 533   1              DispSybmols(Led_NumT1,2,0x00);  
+ 534   1              DispDigit(Led_NumT2,0x0a);      
+ 535   1              DispDigit(Led_NumT3,0x0a);
+ 536   1              DispDigit(Led_NumH1,0x0a);      
+ 537   1              DispDigit(Led_NumH2,0x0a);
+ 538   1              DispSybmols(Led_Date,3,0x00);
+ 539   1              DispSybmols(Led_NumD1,2,0x00);
+ 540   1              DispDigit(Led_NumD2,0x0a);
+ 541   1              DispDigit(Led_NumD3,0x0a);
+ 542   1              DispDigit(Led_NumD4,0x0a);
+ 543   1      }
+ 544          //=============================================================================
+ 545          //功能:显示
+ 546          //输入参数：无
+ 547          //输出参数：无
+ 548          //备注：
+ 549          //=============================================================================
+ 550          void RefreshDisplay(void)
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 10  
+
+ 551          {
+ 552   1              if(Mode==M_PowerOff)
+ 553   1                      return; 
+ 554   1                      
+ 555   1              if(ProFlag&D_2HzFlag)
+ 556   1              {
+ 557   2                      ProFlag &= ~D_2HzFlag;  
+ 558   2                      if(ProFlag&D_HalfSecFlag)               //clr
+ 559   2                      {
+ 560   3                              FlashSecClr();
+ 561   3                              if((ProFlag&D_AdjustFlag)==0)
+ 562   3                              {
+ 563   4                                      HalfSecClr();
+ 564   4                              }                       
+ 565   3                      }               
+ 566   2                      else
+ 567   2                      {
+ 568   3                              ProFlag &= ~D_AdjustFlag;       
+ 569   3      //                              FlashSecDisp();
+ 570   3                              HalfSecDisp();  
+ 571   3                      }       
+ 572   2              }
+ 573   1        
+ 574   1              if(ProFlag&D_AdjustFlag)
+ 575   1              {
+ 576   2                      ProFlag &= ~D_AdjustFlag;
+ 577   2                      HalfSecDisp();  
+ 578   2              }               
+ 579   1      }       
+ 580          /*      
+ 581          //----------------------------------------------------------------------------
+ 582          */
+ 583          static void FlashSecClr(void)
+ 584          {
+ 585   1              if(ProFlag2&(D_PlayAlarm1|D_PlayAlarm2))
+ 586   1                       ClearAlarmFlag();      
+ 587   1          
+ 588   1      }
+ 589          //static void FlashSecDisp(void)        
+ 590          //{
+ 591          //      
+ 592          //}     
+ 593          /*      
+ 594          //----------------------------------------------------------------------------
+ 595          */
+ 596          static void HalfSecClr(void)
+ 597          {
+ 598   1              if(ProFlag&D_NoFlash)   
+ 599   1              {
+ 600   2                      ProFlag &= ~D_NoFlash;
+ 601   2                      return;
+ 602   2              }       
+ 603   1              
+ 604   1              switch(Mode)
+ 605   1              {
+ 606   2                      case M_SetTime:
+ 607   2                              switch(SubMode)
+ 608   2                              {
+ 609   3                                      case 1:
+ 610   3                                              DispSybmols(Led_AmPm,2,0x00);
+ 611   3                                              DispDigit1(Led_Num1,0x0a);      
+ 612   3                                              DispDigit1(Led_Num2,0x0a);
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 11  
+
+ 613   3                                              break;
+ 614   3                                      case 2:
+ 615   3                                              DispDigit1(Led_Num3,0x0a);      
+ 616   3                                              DispDigit1(Led_Num4,0x0a);      
+ 617   3                                              break;
+ 618   3                                      case 3:
+ 619   3                                              DispDigit1(Led_Num1,0x0a);
+ 620   3                                              DispDigit1(Led_Num2,0x0a);      
+ 621   3                                              DispDigit1(Led_Num3,0x0a);      
+ 622   3                                              DispDigit1(Led_Num4,0x0a);      
+ 623   3                                              break;
+ 624   3                                      case 4:
+ 625   3                                              DispSybmols(Led_NumD1,2,0x00);
+ 626   3                                              DispDigit(Led_NumD2,0x0a);
+ 627   3                                              break;
+ 628   3                                      case 5:
+ 629   3                                              DispDigit(Led_NumD3,0x0a);      
+ 630   3                                              DispDigit(Led_NumD4,0x0a);      
+ 631   3                                              break;
+ 632   3                                      case 6:
+ 633   3                                              DispSybmols(Led_TH,3,0x04);     
+ 634   3                                              break;
+ 635   3                                      default:
+ 636   3                                              break;  
+ 637   3                              }
+ 638   2                              break;
+ 639   2                      case M_SetAlarm:
+ 640   2                              switch(SubMode)
+ 641   2                              {
+ 642   3                                      case 1:
+ 643   3                                              DispSybmols(Led_AmPm,2,0x00);
+ 644   3                                              DispDigit1(Led_Num1,0x0a);      
+ 645   3                                              DispDigit1(Led_Num2,0x0a);
+ 646   3                                              break;
+ 647   3                                      case 2:
+ 648   3                                              DispDigit1(Led_Num3,0x0a);      
+ 649   3                                              DispDigit1(Led_Num4,0x0a);      
+ 650   3                                              break;
+ 651   3                                      default:
+ 652   3                                              break;  
+ 653   3                              }
+ 654   2                              break;
+ 655   2                      case M_Timer:
+ 656   2                              if(ProFlag2==D_PlayTimer)       
+ 657   2                              {
+ 658   3                                      DispSybmols(Led_Col,2,0x00);
+ 659   3                                      DispDigit1(Led_Num1,0x0a);      
+ 660   3                                      DispDigit1(Led_Num2,0x0a);
+ 661   3                                      DispDigit1(Led_Num3,0x0a);      
+ 662   3                                      DispDigit1(Led_Num4,0x0a);
+ 663   3                              }       
+ 664   2                              break;
+ 665   2                      default:
+ 666   2                              break;  
+ 667   2            }         
+ 668   1      }
+ 669          
+ 670          static void HalfSecDisp(void)
+ 671          {
+ 672   1              switch(Mode)
+ 673   1              {
+ 674   2                      case M_Normal:
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 12  
+
+ 675   2                              DispAlarmFlag();
+ 676   2                              DispDstFlag();
+ 677   2                              DispTime();
+ 678   2                              DispTempHumi();
+ 679   2                              DispDate();
+ 680   2                              break;
+ 681   2                      case M_SetTime:
+ 682   2                              if(SubMode==0x00)
+ 683   2                                      DispHourMode();
+ 684   2                              else if(SubMode==0x03)  
+ 685   2                                      DispYear();
+ 686   2                              else    
+ 687   2                                      DispTime();
+ 688   2                              DispAlarmFlag();        
+ 689   2                              DispDstFlag();
+ 690   2                              DispTempHumi();
+ 691   2                              DispDate();     
+ 692   2                              break;
+ 693   2                      case M_Alarm:
+ 694   2                              DispSybmol(Led_Dst,0);  
+ 695   2                              DispAlarmFlag();
+ 696   2                              DispAlarm();
+ 697   2                              DispAlarmMode();
+ 698   2                              DispTempHumi();
+ 699   2                              DispDate();     
+ 700   2                              break;
+ 701   2                      case M_SetAlarm:
+ 702   2                              if(SubMode==0x00)
+ 703   2                              {
+ 704   3                                      DispAlarmOnOff();
+ 705   3                                      DispWeek(0x0a);
+ 706   3                              }       
+ 707   2                              else if(SubMode==0x03)
+ 708   2                              {
+ 709   3                                      DispAlarmMode1();
+ 710   3                                      DispAlarmMode();
+ 711   3                              }       
+ 712   2                              else
+ 713   2                                      DispAlarm();
+ 714   2                              DispSybmol(Led_Dst,0);          
+ 715   2                              DispAlarmFlag();
+ 716   2                              DispTempHumi();
+ 717   2                              DispDate();     
+ 718   2                              break;  
+ 719   2                      case M_SetDisp:
+ 720   2                              DispSybmol(Led_Dst,0);  
+ 721   2                              DispAlarmFlag();
+ 722   2                              ClearTimerNoDisp();
+ 723   2                              DispSetDispLv();        
+ 724   2                              break;          
+ 725   2                      case M_SetDisp1:
+ 726   2                              DispSybmol(Led_Dst,0);  
+ 727   2                              DispAlarmFlag();
+ 728   2                              ClearTimerNoDisp();
+ 729   2                              DispSetDimmerOnOff();   
+ 730   2                              break;          
+ 731   2                      case M_SetLight:
+ 732   2                              DispSybmol(Led_Dst,0);  
+ 733   2                              DispAlarmFlag();
+ 734   2                              ClearTimerNoDisp();
+ 735   2                              DispSetLightMode();     
+ 736   2                              break;  
+C51 COMPILER V9.00   REFRESH                                                               01/25/2026 17:20:40 PAGE 13  
+
+ 737   2                      case M_SetLight1:
+ 738   2                              DispSybmol(Led_Dst,0);  
+ 739   2                              DispAlarmFlag();
+ 740   2                              ClearTimerNoDisp();
+ 741   2                              DispSetLightLv();       
+ 742   2                              break;          
+ 743   2                      case M_SetSound:
+ 744   2                              DispSybmol(Led_Dst,0);  
+ 745   2                              DispAlarmFlag();
+ 746   2                              ClearTimerNoDisp();
+ 747   2                              DispSetSoundLv();       
+ 748   2                              break;                  
+ 749   2                      case M_Timer:
+ 750   2                              DispSybmol(Led_Dst,0);  
+ 751   2                              DispAlarmFlag();
+ 752   2                              ClearTimerNoDisp();
+ 753   2                              DispTimer();
+ 754   2                              break;  
+ 755   2                      default:
+ 756   2                              break;    
+ 757   2              }                
+ 758   1      }       
+ 759          //=============================================================================
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2718    ----
+   CONSTANT SIZE    =     11    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      16
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

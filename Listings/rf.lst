@@ -1,0 +1,599 @@
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE RF
+OBJECT MODULE PLACED IN .\Objects\rf.obj
+COMPILER INVOKED BY: D:\Program Files\keil\C51\BIN\C51.EXE src\rf.c BROWSE INCDIR(.\src) DEBUG OBJECTEXTEND PRINT(.\List
+                    -ings\rf.lst) OBJECT(.\Objects\rf.obj)
+
+line level    source
+
+   1          /*********************************************************************************************************
+             -************/
+   2          #include "AllHeadFile.h"
+   3          //=============================================================================
+   4          #define IR_ID_H         0x00
+   5          #define IR_ID_L         0xFF
+   6          
+   7          #define IO_IR           P1_2
+   8          
+   9          idata uchar IrKeyState;
+  10          idata uchar IrState;
+  11          idata uchar IrByteCnt;
+  12          idata uchar IrBitCnt;
+  13          idata ulong IrData;
+  14          idata ulong IrDataBuf;
+  15          idata uchar IrHoldTime;
+  16          idata uchar IrReleaseTime;
+  17          idata uchar IrOldKey;
+  18          idata uchar IrKeyCode;
+  19          
+  20          
+  21          //static void CheckIrHoldKey(void);
+  22          static void CheckIrMuteKey(uchar ir_key);
+  23          //static void SetHoldKey(uchar holdkey);
+  24          
+  25          /*
+  26          **********************************************************************************************************
+             -*******
+  27          */
+  28          //8k
+  29          void CheckReceiveData(void)
+  30          {
+  31   1              uchar tmpBit;   
+  32   1      //      uchar tmpData[4];       
+  33   1              if(SysFlag&D_IrEn)
+  34   1              {
+  35   2                      if(IrBitCnt<255)
+  36   2                              IrBitCnt++;
+  37   2                      if(IO_IR==0)    //low
+  38   2                      {
+  39   3      //                              if((IrState&0x01)==0)
+  40   3      //                              IrState &= ~0x02;
+  41   3                              IrState &= ~0x01;
+  42   3                      }
+  43   2                      else            //high
+  44   2                      {
+  45   3                              if((IrState&0x01)==0)
+  46   3      //                                      IrState |= 0x01;
+  47   3      //                              else if((IrState&0x01)==0)
+  48   3                              {
+  49   4                                      IrState |= 0x01;        //有上升沿
+  50   4                                      //check receive bit
+  51   4                                      tmpBit = 0;
+  52   4                                      if((IrBitCnt<4)||(IrBitCnt>46))
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 2   
+
+  53   4                                      {       
+  54   5                                              IrState &= ~0x04;       //BitErr
+  55   5                                      }
+  56   4                                      else if(IrBitCnt<13)
+  57   4                                      {
+  58   5                                              if(IrState&0x04)
+  59   5                                                      tmpBit = 1;             //bit0          
+  60   5                                      }
+  61   4                                      else if(IrBitCnt<27)
+  62   4                                      {
+  63   5                                              if(IrState&0x04)
+  64   5                                                      tmpBit = 2;             //bit1  
+  65   5      //                                              CheckIrHoldKey();       //hold          
+  66   5                                              IrReleaseTime = 0;
+  67   5                                              if(IrKeyState==D_IrMultKey)
+  68   5                                              {
+  69   6                                                      IrKeyCode = IrOldKey;
+  70   6                                              }       
+  71   5                                              else if(IrKeyState==D_IrWaitKey)
+  72   5                                              {       
+  73   6                                                      IrHoldTime++;
+  74   6                                                      if(IrHoldTime>19)               //2s
+  75   6                                                      {
+  76   7                                                              IrKeyState = D_IrHoldKey;
+  77   7                                                              IrKeyCode = IrOldKey;
+  78   7                                                      }       
+  79   6                                              }       
+  80   5                                      }
+  81   4                                      else
+  82   4                                      {
+  83   5                                              IrState |= 0x04;        //start
+  84   5                                              IrByteCnt = 0;  
+  85   5                                      }       
+  86   4                                      IrBitCnt = 0;
+  87   4              
+  88   4                                      if(tmpBit)
+  89   4                                      {
+  90   5                                              IrData = IrData>>1;
+  91   5                                              if(tmpBit==2)
+  92   5                                                      IrData |= 0x80000000;   
+  93   5                  
+  94   5                                              IrByteCnt++;
+  95   5                                              if(IrByteCnt>31)
+  96   5                                              {
+  97   6      //                                                      tmpData[3] = (uchar)((IrData>>24)&0xff);        
+  98   6      //                                                      tmpData[2] = (uchar)((IrData>>16)&0xff);        
+  99   6      //                                                      tmpData[1] = (uchar)((IrData>>8)&0xff); 
+ 100   6      //                                                      tmpData[0] = (uchar)(IrData&0xff);      
+ 101   6      //                  
+ 102   6      //                                                      if(((tmpData[0]==IR_ID_H)&&(tmpData[1]==IR_ID_L))&&
+ 103   6      //                                                              ((tmpData[3]^0xff)==tmpData[2]))
+ 104   6      //                                                      {
+ 105   6      //                                                              //Receive Ok
+ 106   6      //                                                      IrOldKey = tmpData[2];  
+ 107   6      //                                                      IrKeyState = D_IrWaitKey;
+ 108   6      //                                                      IrHoldTime = 0;
+ 109   6      //                                                      IrReleaseTime = 0;
+ 110   6      //                                                      }
+ 111   6                                                      IrDataBuf = IrData;
+ 112   6                                                      IrState |= 0x08;        //have key
+ 113   6                                                      
+ 114   6                                              }               
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 3   
+
+ 115   5                                      }       
+ 116   4                              }               
+ 117   3                      }                               
+ 118   2              }               
+ 119   1      }
+ 120          /*
+ 121          **********************************************************************************************************
+             -*******
+ 122          */
+ 123          void TurnIrOn(void)             //dc on
+ 124          {
+ 125   1              SysFlag |= D_IrEn;
+ 126   1              IrState = 0;
+ 127   1              IrKeyState = 0;
+ 128   1              IrKeyCode = 0xff;
+ 129   1      }
+ 130          
+ 131          void TurnIrOff(void)            //dc off
+ 132          {
+ 133   1              SysFlag &= ~D_IrEn;
+ 134   1              IrState = 0;
+ 135   1              IrKeyState = 0;
+ 136   1              IrKeyCode = 0xff;
+ 137   1      }
+ 138          
+ 139          /*
+ 140          **********************************************************************************************************
+             -*******
+ 141          */
+ 142          //32hz
+ 143          void CheckReleaseIrHold(void)
+ 144          {
+ 145   1              if(SysFlag&D_IrEn)
+ 146   1              {
+ 147   2                      IrReleaseTime++;        
+ 148   2                      if(IrReleaseTime>4)     //
+ 149   2                      {
+ 150   3                              if(IrKeyState==D_IrWaitKey)
+ 151   3                              {
+ 152   4                                      IrKeyCode = IrOldKey;
+ 153   4                              }       
+ 154   3                              IrKeyState = 0;
+ 155   3                      }               
+ 156   2              }                       
+ 157   1      }
+ 158          /*
+ 159          **********************************************************************************************************
+             -*******
+ 160          */
+ 161          //ir scan high
+ 162          //static void CheckIrHoldKey(void)
+ 163          //{
+ 164          //      IrReleaseTime = 0;
+ 165          //      if(IrKeyState==D_IrMultKey)
+ 166          //      {
+ 167          //              IrKeyCode = IrOldKey;
+ 168          //      }       
+ 169          //      else if(IrKeyState==D_IrWaitKey)
+ 170          //      {       
+ 171          //              IrHoldTime++;
+ 172          //              if(IrHoldTime>19)               //2s
+ 173          //              {
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 4   
+
+ 174          //                      IrKeyState = D_IrHoldKey;
+ 175          //                      IrKeyCode = IrOldKey;
+ 176          //              }       
+ 177          //      }
+ 178          //}     
+ 179          /*
+ 180          **********************************************************************************************************
+             -*******
+ 181          */
+ 182          static void CheckIrMuteKey(uchar ir_key)
+ 183          {
+ 184   1              if(IrKeyState&D_IrHoldKey)
+ 185   1              {
+ 186   2                      //check if mult key
+ 187   2                      if((ir_key==KEY_IR_UP)||(ir_key==KEY_IR_DOWN))
+ 188   2                              IrKeyState = D_IrMultKey;
+ 189   2              } 
+ 190   1              else if(IrKeyState&D_IrMultKey)
+ 191   1              {
+ 192   2                      ProFlag |= D_NoFlash;
+ 193   2              }       
+ 194   1      }
+ 195          /*
+ 196          **********************************************************************************************************
+             -*******
+ 197          */
+ 198          //static void SetHoldKey(uchar holdkey)
+ 199          //{
+ 200          //      IrOldKey = holdkey;     
+ 201          //      SysFlag |= D_IrHoldKey;
+ 202          //      IrHoldTime = 0;
+ 203          //      IrReleaseTime = 0;
+ 204          //}     
+ 205          
+ 206          
+ 207          //=============================================================================
+ 208          //功能：IR处理
+ 209          //输入参数：源数据地址、字符数
+ 210          //输出参数：无
+ 211          //=============================================================================
+ 212          void ReceiveDecode(void)
+ 213          {
+ 214   1              uchar ir_key;
+ 215   1              uchar tmpData[4];
+ 216   1              
+ 217   1              if(IrState&0x08)
+ 218   1              {
+ 219   2                      IrState &= ~0x08;
+ 220   2                      tmpData[3] = (uchar)((IrDataBuf>>24)&0xff);     
+ 221   2                      tmpData[2] = (uchar)((IrDataBuf>>16)&0xff);     
+ 222   2                      tmpData[1] = (uchar)((IrDataBuf>>8)&0xff);      
+ 223   2                      tmpData[0] = (uchar)(IrDataBuf&0xff);   
+ 224   2                  
+ 225   2                      if(((tmpData[0]==IR_ID_H)&&(tmpData[1]==IR_ID_L))&&((tmpData[3]^0xff)==tmpData[2]))
+ 226   2                      {
+ 227   3                              //Receive Ok
+ 228   3                              IrOldKey = tmpData[2];  
+ 229   3                              IrKeyState = D_IrWaitKey;
+ 230   3                              IrHoldTime = 0;
+ 231   3                              IrReleaseTime = 0;
+ 232   3                      }
+ 233   2              }       
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 5   
+
+ 234   1              
+ 235   1              
+ 236   1              if(IrKeyCode!=0xff)
+ 237   1              {
+ 238   2                      ir_key = IrKeyCode;
+ 239   2                      IrKeyCode = 0xff;
+ 240   2                      
+ 241   2                      if(ProFlag2>D_PlayKeyTone)
+ 242   2                      {
+ 243   3                              CheckStopAlarm();
+ 244   3                              return;
+ 245   3                      }
+ 246   2              
+ 247   2                      if(ir_key==KEY_IR_POWER)
+ 248   2                      {
+ 249   3                              if((IrKeyState&D_IrHoldKey)==0)
+ 250   3                              {
+ 251   4                                      PlayKeyTone();  
+ 252   4                                      if(Mode)
+ 253   4                                              TurnPowerOff();
+ 254   4                                      else
+ 255   4                                              TurnPowerOn();  
+ 256   4                              }       
+ 257   3                              return;
+ 258   3                      }
+ 259   2                      else if(ir_key==KEY_IR_LIGHT)
+ 260   2                      {
+ 261   3                              if((IrKeyState&D_IrMultKey)==0)
+ 262   3                                      PlayKeyTone();  
+ 263   3                              if((Mode!=M_SetLight)&&(Mode!=M_SetLight1))
+ 264   3                              {
+ 265   4      //                              ResetAdjActive();
+ 266   4                                      TurnLightOnOff();
+ 267   4                              }
+ 268   3                              return;
+ 269   3                      }       
+ 270   2                      else if(ir_key==KEY_IR_LI_COLOR)
+ 271   2                      {
+ 272   3                              if((IrKeyState&D_IrMultKey)==0)
+ 273   3                                      PlayKeyTone();  
+ 274   3                              if(ProFlag1&D_LightOn)
+ 275   3                              {
+ 276   4      //                              ResetAdjActive();
+ 277   4                                      IncLightMode();
+ 278   4                              }       
+ 279   3                              return;
+ 280   3                      }       
+ 281   2                      
+ 282   2                      if(Mode==M_PowerOff)    
+ 283   2                              return;
+ 284   2                      
+ 285   2                      if((IrKeyState&D_IrMultKey)==0)
+ 286   2                              PlayKeyTone();  
+ 287   2                      CheckIrMuteKey(ir_key);         
+ 288   2                      
+ 289   2                      if(IrKeyState&D_IrHoldKey)              //hold key
+ 290   2                      {
+ 291   3                              switch(ir_key)
+ 292   3                              {
+ 293   4                                      case KEY_IR_COUNT:
+ 294   4                                              ClearTimer();
+ 295   4                                              ChangeToNormal();
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 6   
+
+ 296   4                                              break;
+ 297   4                                      case KEY_IR_OK:
+ 298   4                                              if((TimerState&D_TimerOn)==0)
+ 299   4                                              {
+ 300   5                                                      SetBackTime(10);
+ 301   5                                                      ClearTimer();
+ 302   5                                              }
+ 303   4                                              break;  
+ 304   4                                      default:
+ 305   4                                              break;  
+ 306   4                              }       
+ 307   3                              return;
+ 308   3                      }       
+ 309   2                      
+ 310   2                      switch(ir_key)                          //nor key
+ 311   2                      {
+ 312   3                              case KEY_IR_AL1SET:
+ 313   3                                      if((Mode==M_Normal)||(Mode==M_Alarm))
+ 314   3                                      {
+ 315   4                                              AlarmCnt = 0;
+ 316   4                                              ChangeToSetAlarm();
+ 317   4                                      }       
+ 318   3                                      else if((Mode==M_SetAlarm)&&(AlarmCnt==0))
+ 319   3                                      {
+ 320   4                                              SetBackTime(10);
+ 321   4                                              SubMode++;
+ 322   4                                              if(SubMode>3)
+ 323   4                                                      ChangeToNormal();
+ 324   4                                      }       
+ 325   3                                      break;
+ 326   3                              case KEY_IR_AL2SET:
+ 327   3                                      if((Mode==M_Normal)||(Mode==M_Alarm))
+ 328   3                                      {
+ 329   4                                              AlarmCnt = 1;
+ 330   4                                              ChangeToSetAlarm();
+ 331   4                                      }       
+ 332   3                                      else if((Mode==M_SetAlarm)&&(AlarmCnt==1))
+ 333   3                                      {
+ 334   4                                              SetBackTime(10);
+ 335   4                                              SubMode++;
+ 336   4                                              if(SubMode>3)
+ 337   4                                                      ChangeToNormal();
+ 338   4                                      }
+ 339   3                                      break;  
+ 340   3                              case KEY_IR_AL1ON:
+ 341   3                                      if(Mode==M_Normal)
+ 342   3                                      {
+ 343   4                                              ProFlag |= D_AdjustFlag;
+ 344   4                                              ProFlag1 ^= D_Alarm1On;
+ 345   4                                      }       
+ 346   3                                      break;
+ 347   3                              case KEY_IR_AL2ON:
+ 348   3                                      if(Mode==M_Normal)
+ 349   3                                      {
+ 350   4                                              ProFlag |= D_AdjustFlag;
+ 351   4                                              ProFlag1 ^= D_Alarm2On;
+ 352   4                                      }       
+ 353   3                                      break;  
+ 354   3                              case KEY_IR_SET:
+ 355   3                                      switch(Mode)
+ 356   3                                      {
+ 357   4                                              case M_Normal:
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 7   
+
+ 358   4                                                      ChangeToSetTime();
+ 359   4                                                      break;
+ 360   4                                              case M_SetTime:
+ 361   4                                                      SetBackTime(10);
+ 362   4                                                      SubMode++;
+ 363   4                                                      if(SubMode>6)
+ 364   4                                                              ChangeToNormal();       
+ 365   4                                                      break;  
+ 366   4                                              default:
+ 367   4                                                      break;          
+ 368   4                                      }       
+ 369   3                                      break;  
+ 370   3                              case KEY_IR_DOWN:
+ 371   3                                      switch(Mode)
+ 372   3                                      {
+ 373   4                                              case M_SetTime:
+ 374   4                                                      DecSetTimeNum();
+ 375   4                                                      break;
+ 376   4                                              case M_SetAlarm:
+ 377   4                                                      DecSetAlarmNum();
+ 378   4                                                      break;
+ 379   4                                              case M_Timer:
+ 380   4                                                      if((TimerState&D_TimerOn)==0)
+ 381   4                                                      {
+ 382   5                                                              SetBackTime(10);
+ 383   5                                                              if(IrKeyState&D_IrMultKey)
+ 384   5                                                              {
+ 385   6                                                                      if(TimerMin)
+ 386   6                                                                              TimerMin--;
+ 387   6                                                                      else if(TimerSec)
+ 388   6                                                                              TimerSec--;     
+ 389   6                                                              }       
+ 390   5                                                              else if(TimerSec||TimerMin)
+ 391   5                                                              {
+ 392   6                                                                      if(TimerSec)
+ 393   6                                                                              TimerSec--;
+ 394   6                                                                      else
+ 395   6                                                                      {
+ 396   7                                                                              TimerSec = 59;
+ 397   7                                                                              TimerMin--;
+ 398   7                                                                      }               
+ 399   6                                                              }       
+ 400   5                                                              CheckTimerUpDown();
+ 401   5                                                      }
+ 402   4                                                      break;          
+ 403   4                                              default:
+ 404   4                                                      break;          
+ 405   4                                      }
+ 406   3                                      break;  
+ 407   3                              case KEY_IR_UP:
+ 408   3                                      switch(Mode)
+ 409   3                                      {
+ 410   4                                              case M_SetTime:
+ 411   4                                                      IncSetTimeNum();
+ 412   4                                                      break;
+ 413   4                                              case M_SetAlarm:
+ 414   4                                                      IncSetAlarmNum();
+ 415   4                                                      break;
+ 416   4                                              case M_Timer:
+ 417   4                                                      if((TimerState&D_TimerOn)==0)
+ 418   4                                                      {
+ 419   5                                                              SetBackTime(10);
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 8   
+
+ 420   5                                                              if(IrKeyState&D_IrMultKey)
+ 421   5                                                              {
+ 422   6                                                                      if(TimerMin<99)
+ 423   6                                                                              TimerMin++;
+ 424   6                                                                      else if(TimerSec<59)
+ 425   6                                                                              TimerSec++;     
+ 426   6                                                              }       
+ 427   5                                                              else if((TimerSec<59)||(TimerMin<99))
+ 428   5                                                              {
+ 429   6                                                                      TimerSec++;
+ 430   6                                                                      if(TimerSec>59)
+ 431   6                                                                      {
+ 432   7                                                                              TimerSec = 0;
+ 433   7                                                                              TimerMin++;
+ 434   7                                                                      }       
+ 435   6                                                              }       
+ 436   5                                                              CheckTimerUpDown();
+ 437   5                                                      }
+ 438   4                                                      break;          
+ 439   4                                              default:
+ 440   4                                                      break;          
+ 441   4                                      }
+ 442   3                                      break;  
+ 443   3                              case KEY_IR_OK:
+ 444   3                                      switch(Mode)
+ 445   3                                      {
+ 446   4                                              case M_SetTime:
+ 447   4                                              case M_SetAlarm:        
+ 448   4                                                      ChangeToNormal();
+ 449   4                                                      break;
+ 450   4                                              case M_Timer:
+ 451   4                                                      ProFlag |= D_AdjustFlag;
+ 452   4                                                      TurnTimerOnOff();
+ 453   4                                                      break;  
+ 454   4                                              default:
+ 455   4                                                      break;          
+ 456   4                                      }
+ 457   3                                      break;  
+ 458   3                              case KEY_IR_COUNT:
+ 459   3                                      if(Mode==M_Normal)
+ 460   3                                      {
+ 461   4                                              Mode = M_Timer;
+ 462   4                                              ProFlag |= D_AdjustFlag;
+ 463   4                                              ClearTimer();
+ 464   4                                      }
+ 465   3                                      break;  
+ 466   3                              case KEY_IR_TEMP:
+ 467   3                                      if(Mode<M_SetDisp)
+ 468   3                                      {
+ 469   4                                              ProFlag1 ^=D_TempF;
+ 470   4                                              ProFlag |= D_AdjustFlag;
+ 471   4                                      }       
+ 472   3                                      break;  
+ 473   3                              case KEY_IR_DST:
+ 474   3                                      if(Mode==M_Normal)
+ 475   3                                      {
+ 476   4                                              ProFlag1 ^=D_Dst;
+ 477   4                                              ProFlag |= D_AdjustFlag;
+ 478   4                                              if(ProFlag1&D_Dst)
+ 479   4                                                      AdcOneHour();
+ 480   4                                              else
+ 481   4                                                      SbcOneHour();   
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 9   
+
+ 482   4                                      }
+ 483   3                                      break;  
+ 484   3                              case KEY_IR_12_24:
+ 485   3                                      if(Mode==M_Normal)
+ 486   3                                      {
+ 487   4                                              ProFlag ^=D_24Hour;
+ 488   4                                              ProFlag |= D_AdjustFlag;
+ 489   4                                      }
+ 490   3                                      break;          
+ 491   3                              case KEY_IR_DIMMER:
+ 492   3                                      if(((Mode==M_Normal)||(Mode==M_Alarm)||(Mode==M_SetDisp))&&((ProFlag1&D_AutoDimmer)==0))
+ 493   3                                      {
+ 494   4      //                                      ResetAdjActive();
+ 495   4                                              SetBackTime(4);
+ 496   4                                              Mode = M_SetDisp;
+ 497   4                                              IncDispLv();
+ 498   4                                      }
+ 499   3                                      break;  
+ 500   3                              case KEY_IR_AUTO:
+ 501   3                                      if((Mode==M_Normal)||(Mode==M_Alarm)||(Mode==M_SetDisp1))
+ 502   3                                      {
+ 503   4      //                                      ResetAdjActive();
+ 504   4                                              SetBackTime(4);
+ 505   4                                              Mode = M_SetDisp1;
+ 506   4                                              TurnAutoDimmerOnOff();
+ 507   4                                      }
+ 508   3                                      break;  
+ 509   3                              case KEY_IR_LI_LV:
+ 510   3                                      if(((Mode==M_Normal)||(Mode==M_Alarm)||(Mode==M_SetLight1))&&(ProFlag1&D_LightOn))
+ 511   3                                      {
+ 512   4      //                                      ResetAdjActive();
+ 513   4                                              SetBackTime(4);
+ 514   4                                              Mode = M_SetLight1;
+ 515   4                                              IncLightLv();
+ 516   4                                      }       
+ 517   3                                      break;          
+ 518   3                              case KEY_IR_VOL_D:
+ 519   3                                      if((Mode==M_Normal)||(Mode==M_Alarm)||(Mode==M_SetSound))
+ 520   3                                      {
+ 521   4                                              SetBackTime(4);
+ 522   4                                              ProFlag1 &= ~D_ToneDis;
+ 523   4                                              Mode = M_SetSound;
+ 524   4                                              if(SoundLv)
+ 525   4                                                      SoundLv--;
+ 526   4                                      }       
+ 527   3                                      break;          
+ 528   3                              case KEY_IR_VOL_U:
+ 529   3                                      if((Mode==M_Normal)||(Mode==M_Alarm)||(Mode==M_SetSound))
+ 530   3                                      {
+ 531   4                                              SetBackTime(4);
+ 532   4                                              ProFlag1 &= ~D_ToneDis;
+ 533   4                                              Mode = M_SetSound;
+ 534   4                                              if(SoundLv<4)
+ 535   4                                                      SoundLv++;
+ 536   4                                      }
+ 537   3                                      break;          
+ 538   3                              case KEY_IR_MUTE:
+ 539   3                                      if(Mode==M_SetSound)
+ 540   3                                      {
+ 541   4                                              SetBackTime(4);
+ 542   4                                      }
+ 543   3                                      ProFlag1 ^= D_ToneDis;
+C51 COMPILER V9.00   RF                                                                    01/25/2026 17:20:40 PAGE 10  
+
+ 544   3                                      break;                                                                                                  
+ 545   3                              default:
+ 546   3                                      break;  
+ 547   3                      }       
+ 548   2              }       
+ 549   1      }  
+ 550          //--------------------------------------------------------------------
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1395    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       5
+   IDATA SIZE       =     16    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
